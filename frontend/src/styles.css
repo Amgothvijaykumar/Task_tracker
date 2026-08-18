@@ -1,0 +1,23 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  color: #f8fafc;
+  background: #0b1120;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+
+.page-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: radial-gradient(circle at top right, #1e3a8a, transparent 45%), #0b1120;
+}
+
+.hero { max-width: 720px; }
+.eyebrow { color: #93c5fd; font-size: .8rem; font-weight: 800; letter-spacing: .15em; }
+h1 { font-size: clamp(2.5rem, 8vw, 5rem); line-height: 1; margin: .4rem 0 1.5rem; }
+.intro { color: #cbd5e1; font-size: 1.1rem; line-height: 1.7; }
+.api-status { margin-top: 2rem; color: #bbf7d0; font-weight: 600; }
