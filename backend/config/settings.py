@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 from urllib.parse import urlparse, unquote
 from dotenv import load_dotenv
@@ -51,25 +52,41 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 def database_config() -> dict:
-    database_url = os.getenv('DATABASE_URL')
-    if not database_url or not database_url.strip():
+    database_url = os.getenv('DATABASE_URL', '').strip()
+    if not database_url:
         return {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3'}}
 
-    parsed = urlparse(database_url)
-    username = unquote(parsed.username) if parsed.username else ''
-    password = unquote(parsed.password) if parsed.password else ''
-    db_name = parsed.path.lstrip('/') if parsed.path else 'postgres'
+    try:
+        # Robust regex pattern for postgresql://user:pass@host:port/dbname
+        pattern = r'^postgres(?:ql)?://([^:]+):([^@]+)@([^:/]+)(?::(\d+))?/(.+)$'
+        match = re.match(pattern, database_url)
+        if match:
+            username = unquote(match.group(1)).strip('[]')
+            password = unquote(match.group(2)).strip('[]')
+            host = match.group(3)
+            port = int(match.group(4)) if match.group(4) else 5432
+            db_name = match.group(5).split('?')[0]
+        else:
+            parsed = urlparse(database_url)
+            username = unquote(parsed.username or '').strip('[]')
+            password = unquote(parsed.password or '').strip('[]')
+            host = parsed.hostname
+            port = parsed.port or 5432
+            db_name = parsed.path.lstrip('/') or 'postgres'
 
-    return {'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': db_name,
-        'USER': username,
-        'PASSWORD': password,
-        'HOST': parsed.hostname,
-        'PORT': parsed.port or 5432,
-        'CONN_MAX_AGE': 60,
-        'OPTIONS': {'sslmode': 'require'},
-    }}
+        return {'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': db_name,
+            'USER': username,
+            'PASSWORD': password,
+            'HOST': host,
+            'PORT': port,
+            'CONN_MAX_AGE': 60,
+            'OPTIONS': {'sslmode': 'require'},
+        }}
+    except Exception as e:
+        print(f"Warning: Failed to parse DATABASE_URL ({e}), falling back to SQLite.")
+        return {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3'}}
 
 
 DATABASES = database_config()
