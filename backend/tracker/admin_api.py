@@ -75,14 +75,19 @@ def admin_students(request):
         return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
 
     search = request.query_params.get('search', '').strip()
-    students = User.objects.filter(role='student', status='active').order_by('name')
+    students = User.objects.filter(role='student', status='active')
 
     if search:
         students = students.filter(Q(name__icontains=search) | Q(email__icontains=search))
 
+    student_rows = [student_activity_row(s, selected_date) for s in students]
+
+    # Sort students by rank ascending (1, 2, 3...), then score descending, streak descending, name
+    student_rows.sort(key=lambda x: (x.get('rank', 9999), -x.get('total_score', 0), -x.get('current_streak', 0), x.get('name', '')))
+
     return Response({
         'selected_date': selected_date.isoformat(),
-        'students': [student_activity_row(s, selected_date) for s in students],
+        'students': student_rows,
     })
 
 

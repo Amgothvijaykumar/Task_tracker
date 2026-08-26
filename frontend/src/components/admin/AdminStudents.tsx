@@ -24,7 +24,9 @@ export function AdminStudents({ token, selectedDate, onDateChange }: AdminStuden
     setError(null)
     try {
       const data = await fetchAdminStudents(token, selectedDate, search || undefined)
-      setStudents(data.students)
+      // Extra safety client-side sort by rank
+      const sorted = [...data.students].sort((a, b) => (a.rank ?? 9999) - (b.rank ?? 9999))
+      setStudents(sorted)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load students')
     } finally {
@@ -41,15 +43,45 @@ export function AdminStudents({ token, selectedDate, onDateChange }: AdminStuden
     setSearch(searchInput)
   }
 
+  const renderRankBadge = (rank?: number) => {
+    if (!rank) return <span className="text-zinc-500 font-bold">—</span>
+    if (rank === 1) {
+      return (
+        <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-amber-500/20 text-amber-400 border border-amber-500/40 inline-flex items-center gap-1 shadow-[0_2px_10px_rgba(245,158,11,0.3)]">
+          🏆 Rank #1
+        </span>
+      )
+    }
+    if (rank === 2) {
+      return (
+        <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-slate-300/20 text-slate-300 border border-slate-400/40 inline-flex items-center gap-1">
+          🥈 Rank #2
+        </span>
+      )
+    }
+    if (rank === 3) {
+      return (
+        <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-amber-700/20 text-amber-500 border border-amber-600/40 inline-flex items-center gap-1">
+          🥉 Rank #3
+        </span>
+      )
+    }
+    return (
+      <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-950/40 text-purple-400 border border-purple-800/60 inline-flex items-center gap-1">
+        Rank #{rank}
+      </span>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className={`text-2xl font-black tracking-tight ${isDark ? 'text-white drop-shadow-sm' : 'text-slate-900'}`}>
-            Student Activity & Analytics
+            Student Activity & Analytics (Sorted by Leaderboard Rank)
           </h2>
           <p className={`text-xs mt-1 ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
-            Activity for {formatDate(selectedDate)} (IST)
+            Activity for {formatDate(selectedDate)} (IST) · Ordered by Rank #1 to Rank #N
           </p>
         </div>
         
@@ -138,7 +170,9 @@ export function AdminStudents({ token, selectedDate, onDateChange }: AdminStuden
               <tr className={`border-b text-left ${
                 isDark ? 'border-zinc-800 text-zinc-400' : 'border-slate-200 text-slate-500'
               }`}>
+                <th className="pb-3 pr-4 font-bold uppercase tracking-wider">Rank</th>
                 <th className="pb-3 pr-4 font-bold uppercase tracking-wider">Student</th>
+                <th className="pb-3 pr-4 font-bold uppercase tracking-wider">Total Score</th>
                 <th className="pb-3 pr-4 font-bold uppercase tracking-wider">Completions</th>
                 <th className="pb-3 pr-4 font-bold uppercase tracking-wider">Current Streak</th>
                 <th className="pb-3 pr-4 font-bold uppercase tracking-wider">Longest Streak</th>
@@ -150,8 +184,16 @@ export function AdminStudents({ token, selectedDate, onDateChange }: AdminStuden
               {students.map((s) => (
                 <tr key={s.id} className={`transition ${isDark ? 'hover:bg-zinc-900/60' : 'hover:bg-slate-50'}`}>
                   <td className="py-4 pr-4">
+                    {renderRankBadge(s.rank)}
+                  </td>
+                  <td className="py-4 pr-4">
                     <p className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{s.name}</p>
                     <p className={`text-[11px] ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>{s.email}</p>
+                  </td>
+                  <td className="py-4 pr-4">
+                    <span className="font-black text-amber-400 text-sm">
+                      {s.total_score ?? 0} pts
+                    </span>
                   </td>
                   <td className="py-4 pr-4">
                     <span className={`font-black ${s.today_completions > 0 ? 'text-emerald-400 font-bold' : isDark ? 'text-zinc-600' : 'text-slate-400'}`}>
