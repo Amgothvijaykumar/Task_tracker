@@ -18,19 +18,25 @@ import { ProblemCard } from '../components/student/ProblemCard'
 import { ShareModal } from '../components/student/ShareModal'
 import { StudentHistory } from '../components/student/StudentHistory'
 
+type SidebarCategory = 'all' | 'available' | 'my_tasks' | 'uncompleted' | 'ongoing' | 'completed' | 'skipped' | 'hidden'
+
 export function StudentDashboard() {
   const { userProfile, signOut, getToken } = useAuth()
   const { theme } = useTheme()
   const navigate = useNavigate()
+
   const [token, setToken] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState(todayIST())
   const [difficulty, setDifficulty] = useState('')
-  const [view, setView] = useState<FeedView>('feed')
+  const [activeCategory, setActiveCategory] = useState<SidebarCategory>('all')
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+
   const [data, setData] = useState<StudentFeedResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
   const [shareProblem, setShareProblem] = useState<StudentProblem | null>(null)
+  
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
 
@@ -49,19 +55,22 @@ export function StudentDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Map sidebar category to feed view API query
+  const apiView: FeedView = activeCategory === 'hidden' ? 'hidden' : activeCategory === 'skipped' ? 'skipped' : 'feed'
+
   const loadFeed = useCallback(async () => {
     if (!token) return
     setLoading(true)
     setError(null)
     try {
-      const result = await fetchStudentFeed(token, selectedDate, view, difficulty || undefined)
+      const result = await fetchStudentFeed(token, selectedDate, apiView, difficulty || undefined)
       setData(result)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load problems')
     } finally {
       setLoading(false)
     }
-  }, [token, selectedDate, view, difficulty])
+  }, [token, selectedDate, apiView, difficulty])
 
   useEffect(() => {
     loadFeed()
@@ -106,503 +115,536 @@ export function StudentDashboard() {
     .toUpperCase()
     .slice(0, 2)
 
-  // Compute Overview Stats directly from Backend Ranking Engine
-  const totalProblems = data?.problems.length || 0
-  const solvedCount = data?.problems.filter((p) => p.my_status === 'completed').length || (data?.daily_goal?.completed ?? 0)
-  const unsolvedCount = Math.max(0, totalProblems - solvedCount)
+  // Filter problems according to selected category
+  const allProblems = data?.problems || []
+  const filteredProblems = allProblems.filter((p) => {
+    if (activeCategory === 'all') return true
+    if (activeCategory === 'available') return p.my_status === 'unassigned'
+    if (activeCategory === 'my_tasks') return p.my_status === 'assigned' || p.my_status === 'started'
+    if (activeCategory === 'uncompleted') return p.my_status !== 'completed' && p.my_status !== 'hidden'
+    if (activeCategory === 'ongoing') return p.my_status === 'started'
+    if (activeCategory === 'completed') return p.my_status === 'completed'
+    if (activeCategory === 'skipped') return p.my_status === 'skipped'
+    if (activeCategory === 'hidden') return p.my_status === 'hidden'
+    return true
+  })
+
+  // Category counts
+  const availableCount = allProblems.filter((p) => p.my_status === 'unassigned').length
+  const myTasksCount = allProblems.filter((p) => p.my_status === 'assigned' || p.my_status === 'started').length
+  const uncompletedCount = allProblems.filter((p) => p.my_status !== 'completed' && p.my_status !== 'hidden').length
+  const ongoingCount = allProblems.filter((p) => p.my_status === 'started').length
+  const completedCount = allProblems.filter((p) => p.my_status === 'completed').length
 
   const userScore = data?.total_score ?? 0
-  const userRankLabel = data?.rank_label ?? (solvedCount > 0 ? 'Rank #1 of 1' : 'Unranked')
+  const userRankLabel = data?.rank_label ?? (completedCount > 0 ? 'Rank #1 of 1' : 'Unranked')
 
   const isDark = theme === 'dark'
 
+  const navItems: { id: SidebarCategory; label: string; icon: string; count?: number }[] = [
+    { id: 'all', label: 'Dashboard', icon: '🎛️', count: allProblems.length },
+    { id: 'available', label: 'Available Problems', icon: '📝', count: availableCount },
+    { id: 'my_tasks', label: 'My Tasks', icon: '📌', count: myTasksCount },
+    { id: 'uncompleted', label: 'Uncompleted', icon: '⏳', count: uncompletedCount },
+    { id: 'ongoing', label: 'Ongoing', icon: '⚡', count: ongoingCount },
+    { id: 'completed', label: 'Completed', icon: '✅', count: completedCount },
+    { id: 'hidden', label: 'Hidden (View again)', icon: '👁️' },
+  ]
+
   return (
-    <div className={`min-h-screen font-sans transition-colors duration-300 ${
+    <div className={`min-h-screen font-sans transition-colors duration-300 flex ${
       isDark ? 'bg-[#050506] text-white selection:bg-blue-600 selection:text-white' : 'bg-slate-50 text-slate-900 selection:bg-blue-500 selection:text-white'
     }`}>
-      {/* 1. Header / Profile Navbar */}
-      <header className={`sticky top-0 z-50 backdrop-blur-md border-b transition-colors duration-300 ${
+
+      {/* 1. LEFT SIDEBAR NAVBAR */}
+      <aside className={`fixed top-0 bottom-0 left-0 w-64 z-50 flex flex-col justify-between border-r transition-transform duration-300 ${
+        isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      } ${
         isDark
-          ? 'bg-[#09090b]/90 border-zinc-800/80 shadow-[inset_0_-1px_0_rgba(255,255,255,0.05),0_4px_20px_rgba(0,0,0,0.8)]'
-          : 'bg-white/90 border-slate-200 shadow-sm'
+          ? 'bg-[#09090d]/95 border-zinc-800/80 backdrop-blur-xl shadow-[5px_0_30px_rgba(0,0,0,0.8)]'
+          : 'bg-white/95 border-slate-200 backdrop-blur-xl shadow-lg'
       }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4 relative">
-          
-          {/* LEFT SIDE: Interactive Profile Circle & Brand Navbar */}
-          <div className="flex items-center gap-4">
-            
-            {/* Interactive Profile Circle Avatar Pill */}
-            <div className="relative" ref={profileRef}>
-              <button
-                type="button"
-                onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className={`flex items-center gap-2.5 p-1.5 pr-3 rounded-full border transition cursor-pointer hover:scale-105 active:scale-95 ${
-                  isDark
-                    ? 'bg-[#121218] hover:bg-zinc-800 border-zinc-700/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_4px_12px_rgba(0,0,0,0.6)]'
-                    : 'bg-slate-100 hover:bg-slate-200 border-slate-300 shadow-sm'
-                }`}
-                title="Click to view profile overview, score, & settings"
-              >
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 via-indigo-600 to-blue-600 flex items-center justify-center text-xs font-black text-white shadow-[0_2px_8px_rgba(79,70,229,0.5)] ring-2 ring-blue-500/40">
-                  {userInitials}
-                </div>
-                <div className="text-left hidden sm:block">
-                  <p className={`text-xs font-black leading-none flex items-center gap-1 ${isDark ? 'text-zinc-100' : 'text-slate-900'}`}>
-                    <span>{userName}</span>
-                    <span className="text-[10px] text-blue-400">▼</span>
-                  </p>
-                  <p className={`text-[10px] leading-tight mt-0.5 ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
-                    {userProfile?.email}
-                  </p>
-                </div>
-              </button>
-
-              {/* PROFILE DROPDOWN MENU / OVERVIEW MODAL */}
-              {isProfileOpen && (
-                <div className={`absolute top-full left-0 mt-3 w-80 sm:w-96 rounded-3xl border p-6 shadow-2xl z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200 ${
-                  isDark
-                    ? 'bg-gradient-to-b from-[#181820] to-[#0a0a0e] border-zinc-700/80 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_20px_50px_rgba(0,0,0,0.9)]'
-                    : 'bg-white border-slate-200 text-slate-900 shadow-slate-300/80'
-                }`}>
-                  
-                  {/* Profile Dropdown Header */}
-                  <div className="flex items-center gap-3.5 pb-4 border-b border-zinc-800/80">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-sm font-black text-white shadow-[0_4px_14px_rgba(79,70,229,0.5)]">
-                      {userInitials}
-                    </div>
-                    <div className="space-y-0.5">
-                      <h4 className="text-base font-black tracking-tight">{userName}</h4>
-                      <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>{userProfile?.email}</p>
-                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-950/90 text-blue-400 border border-blue-800/80 shadow-inner">
-                        {userProfile?.role || 'Student'} Aspirant
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* OVERVIEW STATS GRID */}
-                  <div>
-                    <p className={`text-xs font-black uppercase tracking-wider mb-3 ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
-                      Tactile Overview
-                    </p>
-
-                    <div className="grid grid-cols-2 gap-2.5">
-                      {/* Solved */}
-                      <div className={`p-3.5 rounded-2xl border space-y-1 ${
-                        isDark
-                          ? 'bg-[#08080c] border-zinc-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]'
-                          : 'bg-slate-50 border-slate-200 shadow-inner'
-                      }`}>
-                        <div className="flex items-center justify-between text-[11px] text-zinc-400 font-medium">
-                          <span>Solved</span>
-                          <span>🎯</span>
-                        </div>
-                        <p className="text-2xl font-black text-emerald-400 drop-shadow-sm">{solvedCount}</p>
-                        <p className="text-[10px] text-zinc-500">Problems completed</p>
-                      </div>
-
-                      {/* Unsolved */}
-                      <div className={`p-3.5 rounded-2xl border space-y-1 ${
-                        isDark
-                          ? 'bg-[#08080c] border-zinc-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]'
-                          : 'bg-slate-50 border-slate-200 shadow-inner'
-                      }`}>
-                        <div className="flex items-center justify-between text-[11px] text-zinc-400 font-medium">
-                          <span>Unsolved</span>
-                          <span>⏳</span>
-                        </div>
-                        <p className="text-2xl font-black text-amber-400 drop-shadow-sm">{unsolvedCount}</p>
-                        <p className="text-[10px] text-zinc-500">Pending tasks</p>
-                      </div>
-
-                      {/* Dynamic Score */}
-                      <div className={`p-3.5 rounded-2xl border space-y-1 ${
-                        isDark
-                          ? 'bg-[#08080c] border-zinc-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]'
-                          : 'bg-slate-50 border-slate-200 shadow-inner'
-                      }`}>
-                        <div className="flex items-center justify-between text-[11px] text-zinc-400 font-medium">
-                          <span>Score</span>
-                          <span>⚡</span>
-                        </div>
-                        <p className="text-2xl font-black text-blue-400 drop-shadow-sm">{userScore} <span className="text-xs font-normal text-zinc-400">pts</span></p>
-                        <p className="text-[10px] text-zinc-500">Earned score</p>
-                      </div>
-
-                      {/* Exact Student Rank */}
-                      <div className={`p-3.5 rounded-2xl border space-y-1 ${
-                        isDark
-                          ? 'bg-[#08080c] border-zinc-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]'
-                          : 'bg-slate-50 border-slate-200 shadow-inner'
-                      }`}>
-                        <div className="flex items-center justify-between text-[11px] text-zinc-400 font-medium">
-                          <span>Rank</span>
-                          <span>🏆</span>
-                        </div>
-                        <p className="text-xs font-black text-purple-400 truncate drop-shadow-sm">{userRankLabel}</p>
-                        <p className="text-[10px] text-zinc-500">Global Leaderboard</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Profile Actions */}
-                  <div className="pt-2 border-t border-zinc-800/80 space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsProfileOpen(false)
-                        navigate('/profile')
-                      }}
-                      className={`w-full py-2.5 px-3 text-xs font-bold rounded-xl border flex items-center justify-between transition shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] ${
-                        isDark
-                          ? 'bg-[#14141c] hover:bg-zinc-800 text-zinc-200 border-zinc-700/80'
-                          : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
-                      }`}
-                    >
-                      <span>⚙️ Edit Profile & Account Settings</span>
-                      <span>→</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsProfileOpen(false)
-                        handleSignOut()
-                      }}
-                      className="w-full py-2.5 px-3 text-xs font-bold rounded-xl bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] flex items-center justify-between transition"
-                    >
-                      <span>🚪 Sign Out</span>
-                      <span>↗</span>
-                    </button>
-                  </div>
-
-                </div>
-              )}
+        <div>
+          {/* Sidebar Top Logo */}
+          <div className={`h-16 px-6 flex items-center gap-3 border-b cursor-pointer ${
+            isDark ? 'border-zinc-800/80' : 'border-slate-200'
+          }`} onClick={() => navigate('/')}>
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center font-black text-white text-sm shadow-[0_4px_12px_rgba(37,99,235,0.4)]">
+              ⚡
             </div>
-
-            {/* Separator Divider */}
-            <div className={`h-6 w-px hidden sm:block ${isDark ? 'bg-zinc-800' : 'bg-slate-200'}`} />
-
-            {/* Brand Logo & Title */}
-            <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/')}>
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center font-black text-white text-xs shadow-[0_2px_8px_rgba(37,99,235,0.4)]">
-                ⚡
-              </div>
-              <div className="hidden md:block">
-                <h1 className={`text-base font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  DSA Daily Tracker
-                </h1>
-                <span className={`text-[10px] font-semibold uppercase tracking-widest block ${
-                  isDark ? 'text-blue-400' : 'text-blue-600'
-                }`}>
-                  Career With Chaitanya
-                </span>
-              </div>
+            <div>
+              <h1 className={`text-base font-black tracking-tight leading-none ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                Task Monitor
+              </h1>
+              <span className={`text-[10px] font-bold uppercase tracking-widest block mt-0.5 ${
+                isDark ? 'text-blue-400' : 'text-blue-600'
+              }`}>
+                Career With Chaitanya
+              </span>
             </div>
           </div>
 
-          {/* RIGHT SIDE: Skeuomorphic Theme Toggle Switch with Burnout & Sign Out */}
+          {/* Navigation Links */}
+          <nav className="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-140px)]">
+            <p className={`text-[11px] font-black uppercase tracking-wider px-3 mb-2 ${
+              isDark ? 'text-zinc-500' : 'text-slate-400'
+            }`}>
+              Navigation Menu
+            </p>
+
+            {navItems.map((item) => {
+              const isActive = activeCategory === item.id
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveCategory(item.id)
+                    setIsMobileSidebarOpen(false)
+                  }}
+                  className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition active:scale-95 ${
+                    isActive
+                      ? isDark
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-[0_4px_15px_rgba(59,130,246,0.4)]'
+                        : 'bg-blue-600 text-white shadow-md'
+                      : isDark
+                        ? 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-base">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </div>
+
+                  {item.count !== undefined && (
+                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                      isActive
+                        ? 'bg-white/20 text-white'
+                        : isDark
+                          ? 'bg-zinc-800 text-zinc-300'
+                          : 'bg-slate-200 text-slate-700'
+                    }`}>
+                      {item.count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+
+            <div className={`pt-3 mt-3 border-t ${isDark ? 'border-zinc-800/80' : 'border-slate-200'}`}>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileSidebarOpen(false)
+                  navigate('/profile')
+                }}
+                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-xs font-bold transition ${
+                  isDark ? 'text-zinc-400 hover:text-white hover:bg-zinc-800/60' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <span className="text-base">👤</span>
+                <span>Profile</span>
+              </button>
+            </div>
+          </nav>
+        </div>
+
+        {/* Sidebar Bottom Profile Pill */}
+        <div className={`p-4 border-t relative ${isDark ? 'border-zinc-800/80' : 'border-slate-200'}`} ref={profileRef}>
+          <button
+            type="button"
+            onClick={() => setIsProfileOpen(!isProfileOpen)}
+            className={`w-full flex items-center justify-between p-2 rounded-2xl border transition ${
+              isDark
+                ? 'bg-[#121218] hover:bg-zinc-800 border-zinc-700/80 shadow-inner'
+                : 'bg-slate-100 hover:bg-slate-200 border-slate-300'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-xs font-black text-white shadow-md">
+                {userInitials}
+              </div>
+              <div className="text-left">
+                <p className={`text-xs font-bold leading-none truncate max-w-[110px] ${isDark ? 'text-zinc-100' : 'text-slate-900'}`}>
+                  {userName}
+                </p>
+                <p className={`text-[10px] truncate max-w-[110px] mt-0.5 ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
+                  {userProfile?.email}
+                </p>
+              </div>
+            </div>
+            <span className="text-xs text-blue-400 font-bold">▼</span>
+          </button>
+
+          {/* Profile Dropdown Modal */}
+          {isProfileOpen && (
+            <div className={`absolute bottom-full left-4 right-4 mb-2 rounded-3xl border p-5 shadow-2xl z-50 space-y-3 ${
+              isDark
+                ? 'bg-gradient-to-b from-[#181820] to-[#0a0a0e] border-zinc-700/80 text-white shadow-[0_20px_50px_rgba(0,0,0,0.9)]'
+                : 'bg-white border-slate-200 text-slate-900 shadow-slate-300/80'
+            }`}>
+              <div className="flex items-center gap-3 pb-3 border-b border-zinc-800/80">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-xs font-black text-white">
+                  {userInitials}
+                </div>
+                <div>
+                  <h4 className="text-xs font-black">{userName}</h4>
+                  <p className="text-[10px] text-zinc-400">{userProfile?.email}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className={`p-2 rounded-xl border ${isDark ? 'bg-[#08080c] border-zinc-800' : 'bg-slate-50 border-slate-200'}`}>
+                  <p className="text-[9px] text-zinc-400 font-bold">Score</p>
+                  <p className="text-base font-black text-amber-400">{userScore} pts</p>
+                </div>
+                <div className={`p-2 rounded-xl border ${isDark ? 'bg-[#08080c] border-zinc-800' : 'bg-slate-50 border-slate-200'}`}>
+                  <p className="text-[9px] text-zinc-400 font-bold">Rank</p>
+                  <p className="text-xs font-black text-purple-400 truncate">{userRankLabel}</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsProfileOpen(false)
+                  navigate('/profile')
+                }}
+                className={`w-full py-2 text-xs font-bold rounded-xl border text-center ${
+                  isDark ? 'bg-[#14141c] text-zinc-200 border-zinc-700' : 'bg-slate-100 text-slate-800 border-slate-300'
+                }`}
+              >
+                ⚙️ Account Settings
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsProfileOpen(false)
+                  handleSignOut()
+                }}
+                className="w-full py-2 text-xs font-bold rounded-xl bg-rose-950/60 text-rose-300 border border-rose-800 text-center"
+              >
+                🚪 Sign Out
+              </button>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* Mobile Backdrop for Sidebar Drawer */}
+      {isMobileSidebarOpen && (
+        <div
+          onClick={() => setIsMobileSidebarOpen(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+        />
+      )}
+
+      {/* MAIN LAYOUT WRAPPER (Padded left for sidebar) */}
+      <div className="flex-1 min-w-0 md:ml-64 flex flex-col">
+
+        {/* 2. TOP HEADER NAVBAR */}
+        <header className={`sticky top-0 z-30 h-16 backdrop-blur-md border-b flex items-center justify-between px-4 sm:px-8 transition-colors ${
+          isDark
+            ? 'bg-[#09090b]/90 border-zinc-800/80 shadow-[inset_0_-1px_0_rgba(255,255,255,0.05)]'
+            : 'bg-white/90 border-slate-200 shadow-sm'
+        }`}>
+          {/* Left: Mobile Hamburger & Welcome Breadcrumb */}
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+              className={`p-2 rounded-xl border md:hidden ${
+                isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-slate-100 border-slate-300 text-slate-900'
+              }`}
+              aria-label="Toggle mobile menu"
+            >
+              ☰
+            </button>
+
+            <div>
+              <h2 className={`text-base font-black tracking-tight flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                <span>Welcome back, {userName}! 👋</span>
+              </h2>
+              <p className={`text-[11px] hidden sm:block ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
+                Track your DSA problem-solving performance.
+              </p>
+            </div>
+          </div>
+
+          {/* Right: Actions, Notification Bell, Theme Switcher, Sign Out */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className={`p-2 rounded-2xl border transition ${
+                isDark ? 'bg-[#121218] hover:bg-zinc-800 border-zinc-700/80 text-zinc-300' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
+              }`}
+              title="Notifications"
+            >
+              🔔
+            </button>
+
             <ThemeToggle />
 
             <button
               onClick={handleSignOut}
-              className="px-3.5 py-1.5 text-xs font-medium text-rose-400 hover:text-rose-300 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-900/50 rounded-xl transition"
+              className="px-3.5 py-1.5 text-xs font-bold text-rose-400 hover:text-rose-300 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-900/50 rounded-xl transition shadow-sm"
             >
               Sign Out
             </button>
           </div>
+        </header>
 
-        </div>
-      </header>
-
-      {/* Main Dashboard Body */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-10">
-        
-        {/* 2. Hero Headline Banner */}
-        <div className="text-center max-w-3xl mx-auto space-y-4 pt-2">
-          <div className={`inline-flex items-center gap-2 px-3.5 py-1 rounded-full border text-xs font-medium transition ${
-            isDark ? 'bg-[#121218] border-zinc-700/80 text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]' : 'bg-white border-slate-200 text-slate-700 shadow-sm'
-          }`}>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
-            <span>Career With Chaitanya · Daily IST Tracker</span>
-          </div>
-
-          <h2 className={`text-3xl sm:text-5xl font-black tracking-tight ${isDark ? 'text-white drop-shadow-sm' : 'text-slate-900'}`}>
-            The Foundation for Your DSA Habit
-          </h2>
-
-          <p className={`text-sm sm:text-base leading-relaxed ${isDark ? 'text-zinc-400' : 'text-slate-600'}`}>
-            A set of beautifully designed daily challenges that you can solve, track, and share. Start here then build your streak.
-          </p>
-        </div>
-
-        {/* 3. Top Stats & Score Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* 3. MAIN DASHBOARD CONTENT */}
+        <main className="p-4 sm:p-8 space-y-8 max-w-7xl mx-auto w-full">
           
-          {/* Daily Goal Card */}
-          <div className={`p-6 rounded-3xl border shadow-xl space-y-3 transition hover:scale-[1.02] ${
-            isDark
-              ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_10px_25px_-5px_rgba(0,0,0,0.8)]'
-              : 'bg-white border-slate-200 shadow-md'
-          }`}>
-            <div className={`flex items-center justify-between text-xs font-black uppercase tracking-wider ${
-              isDark ? 'text-zinc-400' : 'text-slate-500'
-            }`}>
-              <span>Daily Goal</span>
-              <span>🎯</span>
-            </div>
-            <div className="text-4xl font-black text-blue-400 drop-shadow-sm">
-              {goal?.completed ?? 0} <span className={`text-2xl font-medium ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>/ {goal?.target ?? 1}</span>
-            </div>
-            <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-slate-600'}`}>Complete 1 problem scheduled for today</p>
+          {/* Top Stats Cards (5 Grid Items like reference) */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             
-            <div className={`w-full rounded-full h-2.5 overflow-hidden border ${
-              isDark ? 'bg-[#08080c] border-zinc-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]' : 'bg-slate-200 border-slate-300 shadow-inner'
+            {/* 1. Available Problems */}
+            <div className={`p-5 rounded-3xl border shadow-xl space-y-2 transition hover:scale-[1.02] ${
+              isDark
+                ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                : 'bg-white border-slate-200 shadow-md'
             }`}>
-              <div
-                className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
-                style={{ width: `${goalPercent}%` }}
-              ></div>
+              <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 text-base">
+                📝
+              </div>
+              <p className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Available</p>
+              <p className="text-3xl font-black text-blue-400">{availableCount}</p>
             </div>
-          </div>
 
-          {/* Dynamic Score Card */}
-          <div className={`p-6 rounded-3xl border shadow-xl space-y-3 transition hover:scale-[1.02] ${
-            isDark
-              ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_10px_25px_-5px_rgba(0,0,0,0.8)]'
-              : 'bg-white border-slate-200 shadow-md'
-          }`}>
-            <div className={`flex items-center justify-between text-xs font-black uppercase tracking-wider ${
-              isDark ? 'text-zinc-400' : 'text-slate-500'
+            {/* 2. My Tasks */}
+            <div className={`p-5 rounded-3xl border shadow-xl space-y-2 transition hover:scale-[1.02] ${
+              isDark
+                ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                : 'bg-white border-slate-200 shadow-md'
             }`}>
-              <span>Total Score</span>
-              <span>⚡</span>
+              <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-base">
+                📌
+              </div>
+              <p className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>My Tasks</p>
+              <p className="text-3xl font-black text-indigo-400">{myTasksCount}</p>
             </div>
-            <div className="text-4xl font-black text-amber-400 drop-shadow-sm">
-              {userScore} <span className={`text-xl font-normal ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>pts</span>
-            </div>
-            <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-slate-600'}`}>Earned from timed problem completions</p>
-          </div>
 
-          {/* Student Rank Card */}
-          <div className={`p-6 rounded-3xl border shadow-xl space-y-3 transition hover:scale-[1.02] ${
-            isDark
-              ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_10px_25px_-5px_rgba(0,0,0,0.8)]'
-              : 'bg-white border-slate-200 shadow-md'
-          }`}>
-            <div className={`flex items-center justify-between text-xs font-black uppercase tracking-wider ${
-              isDark ? 'text-zinc-400' : 'text-slate-500'
+            {/* 3. Uncompleted */}
+            <div className={`p-5 rounded-3xl border shadow-xl space-y-2 transition hover:scale-[1.02] ${
+              isDark
+                ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                : 'bg-white border-slate-200 shadow-md'
             }`}>
-              <span>Leaderboard Rank</span>
-              <span>🏆</span>
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-base">
+                ⏳
+              </div>
+              <p className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Uncompleted</p>
+              <p className="text-3xl font-black text-amber-400">{uncompletedCount}</p>
             </div>
-            <div className="text-2xl font-black text-purple-400 drop-shadow-sm pt-1">
-              {userRankLabel}
-            </div>
-            <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-slate-600'}`}>Calculated relative to all students</p>
-          </div>
 
-          {/* Current Streak Card */}
-          <div className={`p-6 rounded-3xl border shadow-xl space-y-3 transition hover:scale-[1.02] ${
-            isDark
-              ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_10px_25px_-5px_rgba(0,0,0,0.8)]'
-              : 'bg-white border-slate-200 shadow-md'
-          }`}>
-            <div className={`flex items-center justify-between text-xs font-black uppercase tracking-wider ${
-              isDark ? 'text-zinc-400' : 'text-slate-500'
+            {/* 4. Ongoing */}
+            <div className={`p-5 rounded-3xl border shadow-xl space-y-2 transition hover:scale-[1.02] ${
+              isDark
+                ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                : 'bg-white border-slate-200 shadow-md'
             }`}>
-              <span>Current Streak</span>
-              <span>🔥</span>
+              <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-base">
+                ⚡
+              </div>
+              <p className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Ongoing</p>
+              <p className="text-3xl font-black text-purple-400">{ongoingCount}</p>
             </div>
-            <div className="text-4xl font-black text-emerald-400 drop-shadow-sm">
-              {data?.current_streak ?? 0} <span className={`text-xl font-normal ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>days</span>
+
+            {/* 5. Completed */}
+            <div className={`p-5 rounded-3xl border shadow-xl space-y-2 transition hover:scale-[1.02] col-span-2 lg:col-span-1 ${
+              isDark
+                ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                : 'bg-white border-slate-200 shadow-md'
+            }`}>
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-base">
+                ✅
+              </div>
+              <p className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Completed</p>
+              <p className="text-3xl font-black text-emerald-400">{completedCount}</p>
             </div>
-            <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-slate-600'}`}>{data?.streak_note || 'Keep your streak alive!'}</p>
+
           </div>
 
-        </div>
-
-        {/* 4. Scoring Rules Legend Banner */}
-        <div className={`p-5 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs ${
-          isDark ? 'bg-blue-950/40 border-blue-800/50 text-blue-200' : 'bg-blue-50 border-blue-200 text-blue-900'
-        }`}>
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">⚡</span>
-            <div>
-              <p className="font-black text-sm">Scoring Rules & Timing Tiers</p>
-              <p className="opacity-80">Solve faster after problem post to maximize your rank on the leaderboard!</p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 font-bold">
-            <span className="px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-800/80">Within 1 Day: +10 pts</span>
-            <span className="px-2.5 py-1 rounded-lg bg-blue-950 text-blue-300 border border-blue-800/80">Within 2 Days: +8 pts</span>
-            <span className="px-2.5 py-1 rounded-lg bg-amber-950 text-amber-300 border border-amber-800/80">Within 5 Days: +5 pts</span>
-            <span className="px-2.5 py-1 rounded-lg bg-zinc-900 text-zinc-400 border border-zinc-800">&gt;5 Days: 0 pts</span>
-          </div>
-        </div>
-
-        {/* 5. Problem Feed Container */}
-        <section className={`p-6 sm:p-8 rounded-3xl border shadow-2xl space-y-6 transition ${
-          isDark
-            ? 'bg-gradient-to-b from-[#16161c] to-[#0c0c10] border-zinc-700/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_12px_30px_-5px_rgba(0,0,0,0.8)]'
-            : 'bg-white border-slate-200'
-        }`}>
-          
-          {/* Feed Date Controls */}
-          <div className={`flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-6 border-b ${
-            isDark ? 'border-zinc-800/80' : 'border-slate-200'
-          }`}>
-            <div>
-              <h3 className={`text-2xl font-black tracking-tight ${isDark ? 'text-white drop-shadow-sm' : 'text-slate-900'}`}>
-                {selectedDate === today ? "Today's Problems" : `Problems for ${formatDate(selectedDate)}`}
-              </h3>
-              <p className={`text-xs mt-1 ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
-                Published problems appear here for every student on their scheduled date (IST).
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setSelectedDate(shiftDate(selectedDate, -1))}
-                className={`px-3.5 py-2 text-xs font-bold rounded-xl border transition ${
-                  isDark
-                    ? 'text-zinc-300 hover:text-white bg-[#121218] hover:bg-zinc-800 border-zinc-700/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
-                    : 'text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border-slate-300 shadow-sm'
-                }`}
-              >
-                ← Previous day
-              </button>
-              <input
-                type="date"
-                max={today}
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className={`px-3.5 py-2 text-xs font-medium rounded-xl border focus:outline-none transition ${
-                  isDark
-                    ? 'text-white bg-[#08080c] border-zinc-700/80 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] focus:border-blue-500'
-                    : 'text-slate-900 bg-white border-slate-300 shadow-inner'
-                }`}
-                aria-label="Problem date"
-              />
-              <button
-                type="button"
-                disabled={selectedDate >= today}
-                onClick={() => setSelectedDate(shiftDate(selectedDate, 1) > today ? today : shiftDate(selectedDate, 1))}
-                className={`px-3.5 py-2 text-xs font-bold rounded-xl border transition disabled:opacity-40 disabled:cursor-not-allowed ${
-                  isDark
-                    ? 'text-zinc-300 hover:text-white bg-[#121218] hover:bg-zinc-800 border-zinc-700/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
-                    : 'text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border-slate-300 shadow-sm'
-                }`}
-              >
-                Next day →
-              </button>
-            </div>
-          </div>
-
-          {/* View Tabs & Difficulty Filter */}
-          <div className={`flex flex-wrap items-center justify-between gap-4 pb-4 border-b ${
-            isDark ? 'border-zinc-900' : 'border-slate-100'
-          }`}>
+          {/* Leaderboard Score & Timing Banner Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setView('feed')}
-                className={`px-4 py-2 text-xs font-black rounded-xl transition ${
-                  view === 'feed'
-                    ? isDark
-                      ? 'bg-gradient-to-b from-white to-zinc-200 text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_4px_12px_rgba(255,255,255,0.2)]'
-                      : 'bg-blue-600 text-white shadow-md'
-                    : isDark ? 'bg-[#121218] text-zinc-400 hover:text-white border border-zinc-800' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
-                }`}
-              >
-                Default Feed
-              </button>
+            {/* Score & Rank Highlight Card */}
+            <div className={`lg:col-span-4 p-6 rounded-3xl border shadow-xl space-y-4 ${
+              isDark
+                ? 'bg-gradient-to-br from-blue-950/40 via-zinc-900/60 to-purple-950/40 border-blue-500/30'
+                : 'bg-blue-50/80 border-blue-200 text-slate-900'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black uppercase tracking-wider text-blue-400">Leaderboard Performance</span>
+                <span className="text-xl">🏆</span>
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setView('skipped')}
-                className={`px-4 py-2 text-xs font-black rounded-xl transition ${
-                  view === 'skipped'
-                    ? 'bg-gradient-to-b from-amber-400 to-amber-600 text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_4px_12px_rgba(245,158,11,0.3)]'
-                    : isDark ? 'bg-[#121218] text-zinc-400 hover:text-white border border-zinc-800' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
-                }`}
-              >
-                Skipped
-              </button>
+              <div className="space-y-1">
+                <p className="text-3xl font-black text-amber-400 drop-shadow-sm">{userScore} <span className="text-sm font-normal text-zinc-400">pts</span></p>
+                <p className="text-xs font-black text-purple-400">{userRankLabel}</p>
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setView('hidden')}
-                className={`px-4 py-2 text-xs font-black rounded-xl transition flex items-center gap-1.5 ${
-                  view === 'hidden'
-                    ? 'bg-gradient-to-b from-emerald-400 to-emerald-600 text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_4px_12px_rgba(16,185,129,0.3)]'
-                    : isDark ? 'bg-[#121218] text-zinc-400 hover:text-white border border-zinc-800' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
-                }`}
-              >
-                <span>👁️</span> Hidden (View again)
-              </button>
+              <div className="pt-2 border-t border-blue-500/20 flex justify-between text-xs font-bold text-zinc-300">
+                <span>Current Streak:</span>
+                <span className="text-emerald-400">{data?.current_streak ?? 0} days 🔥</span>
+              </div>
             </div>
 
-            <select
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value)}
-              className={`px-3.5 py-2 text-xs font-medium rounded-xl border focus:outline-none transition ${
-                isDark
-                  ? 'text-white bg-[#08080c] border-zinc-700/80 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] focus:border-blue-500'
-                  : 'text-slate-900 bg-white border-slate-300 shadow-inner'
-              }`}
-              aria-label="Filter by difficulty"
-            >
-              <option value="">All difficulties</option>
-              <option value="Easy">Easy</option>
-              <option value="Medium">Medium</option>
-              <option value="Hard">Hard</option>
-            </select>
+            {/* Daily Goal Meter */}
+            <div className={`lg:col-span-8 p-6 rounded-3xl border shadow-xl space-y-4 ${
+              isDark
+                ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                : 'bg-white border-slate-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className={`text-base font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    Daily Goal ({goal?.completed ?? 0} / {goal?.target ?? 1})
+                  </h3>
+                  <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Complete 1 problem scheduled for today to maintain your streak.</p>
+                </div>
+                <span className="text-2xl">🎯</span>
+              </div>
 
-          </div>
-
-          {error && (
-            <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-800/50 text-rose-300 text-xs">
-              {error}
-            </div>
-          )}
-
-          {loading ? (
-            <div className={`text-center py-16 text-sm ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
-              <div className="w-8 h-8 mx-auto mb-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-              Loading problems...
-            </div>
-          ) : !data || data.problems.length === 0 ? (
-            <div className="text-center py-16 space-y-2">
-              <p className={`text-base font-bold ${isDark ? 'text-zinc-300' : 'text-slate-700'}`}>
-                {view === 'hidden' ? 'No hidden problems for this date' : view === 'skipped' ? 'No skipped problems' : 'No problems posted yet'}
-              </p>
-              <p className={`text-xs max-w-md mx-auto ${isDark ? 'text-zinc-500' : 'text-slate-500'}`}>
-                {data?.message || (view === 'hidden' ? 'Problems you hide will appear here so you can view them again.' : 'Check back later or select another published date.')}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {data.problems.map((problem) => (
-                <ProblemCard
-                  key={problem.id}
-                  problem={problem}
-                  busy={busyId === problem.id}
-                  onAction={handleAction}
-                  onShare={setShareProblem}
+              <div className={`w-full rounded-full h-3 overflow-hidden border ${
+                isDark ? 'bg-[#08080c] border-zinc-800 shadow-inner' : 'bg-slate-200 border-slate-300 shadow-inner'
+              }`}>
+                <div
+                  className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                  style={{ width: `${goalPercent}%` }}
                 />
-              ))}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold">
+                <span className="px-2.5 py-0.5 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-800/80">Within 1 Day: +10 pts</span>
+                <span className="px-2.5 py-0.5 rounded-lg bg-blue-950 text-blue-300 border border-blue-800/80">Within 2 Days: +8 pts</span>
+                <span className="px-2.5 py-0.5 rounded-lg bg-amber-950 text-amber-300 border border-amber-800/80">Within 5 Days: +5 pts</span>
+              </div>
             </div>
-          )}
-        </section>
 
-        {/* 6. Skeuomorphic Progress History Section */}
-        {data && <StudentHistory qualifiedDates={data.qualified_dates} history={data.history} />}
+          </div>
 
-      </main>
+          {/* Problem Feed Container */}
+          <section className={`p-6 sm:p-8 rounded-3xl border shadow-2xl space-y-6 transition ${
+            isDark
+              ? 'bg-gradient-to-b from-[#16161c] to-[#0c0c10] border-zinc-700/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_12px_30px_-5px_rgba(0,0,0,0.8)]'
+              : 'bg-white border-slate-200'
+          }`}>
+            
+            {/* Feed Date & Difficulty Controls */}
+            <div className={`flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-6 border-b ${
+              isDark ? 'border-zinc-800/80' : 'border-slate-200'
+            }`}>
+              <div>
+                <h3 className={`text-2xl font-black tracking-tight ${isDark ? 'text-white drop-shadow-sm' : 'text-slate-900'}`}>
+                  {selectedDate === today ? "Today's Problems" : `Problems for ${formatDate(selectedDate)}`}
+                </h3>
+                <p className={`text-xs mt-1 ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
+                  Showing {filteredProblems.length} problem(s) for selected view.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDate(shiftDate(selectedDate, -1))}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition ${
+                      isDark
+                        ? 'text-zinc-300 hover:text-white bg-[#121218] hover:bg-zinc-800 border-zinc-700/80'
+                        : 'text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border-slate-300'
+                    }`}
+                  >
+                    ← Prev
+                  </button>
+                  <input
+                    type="date"
+                    max={today}
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-xl border focus:outline-none transition ${
+                      isDark
+                        ? 'text-white bg-[#08080c] border-zinc-700/80 focus:border-blue-500'
+                        : 'text-slate-900 bg-white border-slate-300'
+                    }`}
+                    aria-label="Problem date"
+                  />
+                  <button
+                    type="button"
+                    disabled={selectedDate >= today}
+                    onClick={() => setSelectedDate(shiftDate(selectedDate, 1) > today ? today : shiftDate(selectedDate, 1))}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition disabled:opacity-40 disabled:cursor-not-allowed ${
+                      isDark
+                        ? 'text-zinc-300 hover:text-white bg-[#121218] hover:bg-zinc-800 border-zinc-700/80'
+                        : 'text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border-slate-300'
+                    }`}
+                  >
+                    Next →
+                  </button>
+                </div>
+
+                <select
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(e.target.value)}
+                  className={`px-3.5 py-1.5 text-xs font-medium rounded-xl border focus:outline-none transition ${
+                    isDark
+                      ? 'text-white bg-[#08080c] border-zinc-700/80 focus:border-blue-500'
+                      : 'text-slate-900 bg-white border-slate-300'
+                  }`}
+                  aria-label="Filter by difficulty"
+                >
+                  <option value="">All difficulties</option>
+                  <option value="Easy">Easy</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Hard">Hard</option>
+                </select>
+              </div>
+            </div>
+
+            {error && (
+              <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-800/50 text-rose-300 text-xs font-bold">
+                {error}
+              </div>
+            )}
+
+            {loading ? (
+              <div className={`text-center py-16 text-sm ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
+                <div className="w-8 h-8 mx-auto mb-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                Loading problems...
+              </div>
+            ) : filteredProblems.length === 0 ? (
+              <div className="text-center py-16 space-y-2">
+                <p className={`text-base font-bold ${isDark ? 'text-zinc-300' : 'text-slate-700'}`}>
+                  No problems found in this category for {formatDate(selectedDate)}
+                </p>
+                <p className={`text-xs max-w-md mx-auto ${isDark ? 'text-zinc-500' : 'text-slate-500'}`}>
+                  Select another category from the left sidebar or pick another scheduled date.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredProblems.map((problem) => (
+                  <ProblemCard
+                    key={problem.id}
+                    problem={problem}
+                    busy={busyId === problem.id}
+                    onAction={handleAction}
+                    onShare={setShareProblem}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Skeuomorphic Progress History Section */}
+          {data && <StudentHistory qualifiedDates={data.qualified_dates} history={data.history} />}
+
+        </main>
+      </div>
 
       {/* LinkedIn Share Modal */}
       {shareProblem && token && (
