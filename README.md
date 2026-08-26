@@ -1,77 +1,64 @@
-# DSA Daily Tracker
+# CareerWithChaitanya — DSA Daily Task Tracker & Admin Panel
 
-React frontend, Django REST API, and a hosted Supabase PostgreSQL database.
+A production-grade, containerized DSA Problem & Streak Tracker designed for **CareerWithChaitanya**. Features a rich Skeuomorphic & Liquid Glass UI, dark/light theme switcher with full-screen thermal burnout transitions, student leaderboard rankings, dynamic score calculation, and interactive admin analytics.
 
-## Stack
+## Tech Stack
 
-- React + TypeScript + Vite
-- Django + Django REST Framework
-- Supabase: PostgreSQL database and authentication
+- **Frontend**: React 19, TypeScript, Vite, TailwindCSS, Skeuomorphic & Liquid Glass UI, Supabase Auth.
+- **Backend**: Django REST Framework, Python 3.12, Gunicorn WSGI, SQLite / Supabase PostgreSQL.
+- **Containerization**: Docker, Nginx, Docker Compose.
 
-## Supabase cloud setup
+---
 
-You create the Supabase project once; the app connects to it remotely. Do not share database passwords, service-role keys, or `.env` files in Git or chat.
-
-1. Sign in at [Supabase](https://supabase.com/dashboard) and select **New project**.
-2. Choose your organization, name the project `dsa-daily-tracker`, select a nearby region, and save the generated database password in a password manager.
-3. Wait until the project is ready. In **Connect**, copy the **Project URL** and **Publishable key**.
-4. In **Connect → Database**, copy the PostgreSQL **URI**. Put it in `backend/.env` as `DATABASE_URL`. This is private because it includes a password.
-5. Copy `frontend/.env.example` to `frontend/.env` and add the Project URL and Publishable key. The publishable key is intentionally usable in the browser; security comes from Supabase Row Level Security and the Django API authorization that we will add next.
-6. Copy `backend/.env.example` to `backend/.env`, set `DATABASE_URL`, then replace `DJANGO_SECRET_KEY` with a long random value.
-7. In Supabase Dashboard, open **Authentication → Providers**. Enable **Email** and **Google**. For Google, Supabase will show a callback URL; add that exact URL to a Google Cloud OAuth client that we configure in the authentication step.
-
-## Local setup
+## Local Development (Without Docker)
 
 ```bash
-# Terminal 1: Django API
+# Terminal 1: Django Backend
 cd backend
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
-cp .env.example .env
+pip install -r requirements.txt
 python manage.py migrate
-python manage.py runserver
+python manage.py runserver 0.0.0.0:8000
 ```
 
 ```bash
-# Terminal 2: React app
+# Terminal 2: React Frontend
 cd frontend
 npm install
-cp .env.example .env
 npm run dev
 ```
 
-Open the URL shown by Vite, normally `http://localhost:5173`. The page confirms the Django health endpoint once both servers are running.
+Open `http://localhost:5173`.
 
-## Docker setup
+---
 
-Docker Compose runs the Django API and serves the production React build through Nginx:
+## Production Docker Setup 🐳
+
+Docker Compose builds both Django API (Gunicorn) and React SPA (Nginx) into isolated, production-ready containers:
 
 ```bash
 # Run from the repository root
-docker compose --env-file frontend/.env up --build
+docker compose up --build -d
 ```
 
-Open `http://localhost:5173`. The API is available at `http://localhost:8000`.
-The Compose setup uses the local SQLite database at `backend/db.sqlite3` and runs migrations when the backend starts.
+- **Frontend Application**: `http://localhost:5173` (or `http://localhost:80`)
+- **Backend REST API**: `http://localhost:8000/api/`
 
-To stop the containers:
+To view logs:
+```bash
+docker compose logs -f
+```
 
+To stop containers:
 ```bash
 docker compose down
 ```
 
-## Project structure
+---
 
-```text
-frontend/   React application; uses Supabase only for browser authentication
-backend/    Django REST API; authoritative roles, data, streaks, and admin actions
-prd.md      Product requirements document
-```
+## Security & Architecture
 
-## Security boundary
-
-- Never commit `.env` files.
-- The React app receives only Supabase's public Project URL and Publishable key.
-- Django connects to Supabase PostgreSQL using the private database URI.
-- Django, not React, will decide whether a user is an admin and will calculate all authoritative progress data.
+- **Auth Boundary**: Supabase handles browser authentication; Django verifies JWT tokens authoritatively.
+- **Role Enforcement**: Django REST API enforces strict Admin (`IsAdmin`) and Student permissions.
+- **Data Persistence**: Configured for local SQLite or production Supabase PostgreSQL.

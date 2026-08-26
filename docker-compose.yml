@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -8,9 +6,13 @@ services:
     container_name: dsa_tracker_backend
     restart: unless-stopped
     env_file:
-      - .env
+      - path: .env
+        required: false
+      - path: backend/.env
+        required: false
     environment:
       - PYTHONUNBUFFERED=1
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-*}
     ports:
       - "8000:8000"
     healthcheck:
@@ -25,13 +27,13 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
-        VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY}
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-https://mkkniagexuinhhcfalqk.supabase.co}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY:-sb_publishable__5ZCBvlIYIVh4UAPxjwRDg_W_612Z0T}
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
     container_name: dsa_tracker_frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "5173:80"
     depends_on:
       backend:
         condition: service_started
