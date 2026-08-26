@@ -4,7 +4,7 @@ import {
   progressStatusColor,
   progressStatusLabel,
 } from '../../lib/studentApi'
-import { difficultyColor } from '../../lib/adminApi'
+import { difficultyColor, formatDate } from '../../lib/adminApi'
 import { useTheme } from '../../contexts/ThemeContext'
 
 interface ProblemCardProps {
@@ -57,16 +57,28 @@ export function ProblemCard({ problem, busy, onAction, onShare }: ProblemCardPro
           </div>
         </div>
 
-        {problem.source_url && (
-          <a
-            href={problem.source_url}
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs font-bold text-blue-400 hover:text-blue-300 bg-blue-950/70 hover:bg-blue-900 border border-blue-800/80 px-3.5 py-1.5 rounded-xl whitespace-nowrap transition shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] active:scale-95"
-          >
-            Open source ↗
-          </a>
-        )}
+        {/* TOP RIGHT CORNER: Published Date & Source Link */}
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+          <span className={`text-[11px] font-bold px-3 py-1.5 rounded-xl border flex items-center gap-1.5 shadow-inner ${
+            isDark
+              ? 'bg-[#08080c] text-zinc-300 border-zinc-800'
+              : 'bg-slate-100 text-slate-700 border-slate-200'
+          }`} title="Scheduled Publication Date">
+            <span>📅</span>
+            <span>Published: {formatDate(problem.scheduled_date)}</span>
+          </span>
+
+          {problem.source_url && (
+            <a
+              href={problem.source_url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-bold text-blue-400 hover:text-blue-300 bg-blue-950/70 hover:bg-blue-900 border border-blue-800/80 px-3.5 py-1.5 rounded-xl whitespace-nowrap transition shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] active:scale-95"
+            >
+              Open source ↗
+            </a>
+          )}
+        </div>
       </div>
 
       {problem.tags.length > 0 && (

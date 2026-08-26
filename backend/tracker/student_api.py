@@ -70,7 +70,7 @@ def student_feed(request):
             scheduled_date=selected_date,
         )
         .prefetch_related('tags')
-        .order_by('id')
+        .order_by('-scheduled_date', '-created_at', '-id')
     )
 
     difficulty = request.query_params.get('difficulty')
