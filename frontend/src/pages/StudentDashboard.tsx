@@ -18,7 +18,7 @@ import { ProblemCard } from '../components/student/ProblemCard'
 import { ShareModal } from '../components/student/ShareModal'
 import { StudentHistory } from '../components/student/StudentHistory'
 
-type SidebarCategory = 'all' | 'available' | 'my_tasks' | 'uncompleted' | 'ongoing' | 'completed' | 'skipped' | 'hidden'
+type SidebarCategory = 'all' | 'published' | 'ongoing' | 'skipped' | 'hidden'
 
 export function StudentDashboard() {
   const { userProfile, signOut, getToken } = useAuth()
@@ -119,36 +119,32 @@ export function StudentDashboard() {
   const allProblems = data?.problems || []
   const filteredProblems = allProblems.filter((p) => {
     if (activeCategory === 'all') return true
-    if (activeCategory === 'available') return p.my_status === 'unassigned'
-    if (activeCategory === 'my_tasks') return p.my_status === 'assigned' || p.my_status === 'started'
-    if (activeCategory === 'uncompleted') return p.my_status !== 'completed' && p.my_status !== 'hidden'
-    if (activeCategory === 'ongoing') return p.my_status === 'started'
-    if (activeCategory === 'completed') return p.my_status === 'completed'
+    if (activeCategory === 'published') return p.my_status === 'unassigned' || p.my_status === 'assigned' || p.my_status === 'started'
+    if (activeCategory === 'ongoing') return p.my_status === 'started' || p.my_status === 'assigned'
     if (activeCategory === 'skipped') return p.my_status === 'skipped'
     if (activeCategory === 'hidden') return p.my_status === 'hidden'
     return true
   })
 
-  // Category counts
-  const availableCount = allProblems.filter((p) => p.my_status === 'unassigned').length
-  const myTasksCount = allProblems.filter((p) => p.my_status === 'assigned' || p.my_status === 'started').length
-  const uncompletedCount = allProblems.filter((p) => p.my_status !== 'completed' && p.my_status !== 'hidden').length
-  const ongoingCount = allProblems.filter((p) => p.my_status === 'started').length
+  // Exact Status Breakdown Analytics Counts
+  const publishedCount = allProblems.length
   const completedCount = allProblems.filter((p) => p.my_status === 'completed').length
+  const inProgressCount = allProblems.filter((p) => p.my_status === 'started' || p.my_status === 'assigned').length
+  const skippedCount = allProblems.filter((p) => p.my_status === 'skipped').length
+  const hiddenCount = allProblems.filter((p) => p.my_status === 'hidden').length
 
   const userScore = data?.total_score ?? 0
   const userRankLabel = data?.rank_label ?? (completedCount > 0 ? 'Rank #1 of 1' : 'Unranked')
 
   const isDark = theme === 'dark'
 
+  // Streamlined Navigation Menu Items (Removed My Tasks, Uncompleted, Completed)
   const navItems: { id: SidebarCategory; label: string; icon: string; count?: number }[] = [
     { id: 'all', label: 'Dashboard', icon: '🎛️', count: allProblems.length },
-    { id: 'available', label: 'Available Problems', icon: '📝', count: availableCount },
-    { id: 'my_tasks', label: 'My Tasks', icon: '📌', count: myTasksCount },
-    { id: 'uncompleted', label: 'Uncompleted', icon: '⏳', count: uncompletedCount },
-    { id: 'ongoing', label: 'Ongoing', icon: '⚡', count: ongoingCount },
-    { id: 'completed', label: 'Completed', icon: '✅', count: completedCount },
-    { id: 'hidden', label: 'Hidden (View again)', icon: '👁️' },
+    { id: 'published', label: 'Published Problems', icon: '📝', count: publishedCount },
+    { id: 'ongoing', label: 'In Progress / Ongoing', icon: '⚡', count: inProgressCount },
+    { id: 'skipped', label: 'Skipped Problems', icon: '⏩', count: skippedCount },
+    { id: 'hidden', label: 'Hidden (View again)', icon: '👁️', count: hiddenCount },
   ]
 
   return (
@@ -184,7 +180,7 @@ export function StudentDashboard() {
             </div>
           </div>
 
-          {/* Navigation Links */}
+          {/* Streamlined Navigation Links */}
           <nav className="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-140px)]">
             <p className={`text-[11px] font-black uppercase tracking-wider px-3 mb-2 ${
               isDark ? 'text-zinc-500' : 'text-slate-400'
@@ -399,74 +395,87 @@ export function StudentDashboard() {
         {/* 3. MAIN DASHBOARD CONTENT */}
         <main className="p-4 sm:p-8 space-y-8 max-w-7xl mx-auto w-full">
           
-          {/* Top Stats Cards (5 Grid Items like reference) */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            
-            {/* 1. Available Problems */}
-            <div className={`p-5 rounded-3xl border shadow-xl space-y-2 transition hover:scale-[1.02] ${
-              isDark
-                ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
-                : 'bg-white border-slate-200 shadow-md'
-            }`}>
-              <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 text-base">
-                📝
+          {/* DASHBOARD ANALYTICS & PROBLEM STATUS BREAKDOWN SECTION */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className={`text-xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  Student Problem Performance Analytics
+                </h3>
+                <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
+                  Overview of your published, completed, in-progress, skipped, and hidden problem statistics.
+                </p>
               </div>
-              <p className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Available</p>
-              <p className="text-3xl font-black text-blue-400">{availableCount}</p>
             </div>
 
-            {/* 2. My Tasks */}
-            <div className={`p-5 rounded-3xl border shadow-xl space-y-2 transition hover:scale-[1.02] ${
-              isDark
-                ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
-                : 'bg-white border-slate-200 shadow-md'
-            }`}>
-              <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-base">
-                📌
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              
+              {/* 1. Published Problems */}
+              <div className={`p-5 rounded-3xl border shadow-xl space-y-2 transition hover:scale-[1.02] ${
+                isDark
+                  ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                  : 'bg-white border-slate-200 shadow-md'
+              }`}>
+                <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 text-base">
+                  📝
+                </div>
+                <p className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Published Problems</p>
+                <p className="text-3xl font-black text-blue-400">{publishedCount}</p>
               </div>
-              <p className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>My Tasks</p>
-              <p className="text-3xl font-black text-indigo-400">{myTasksCount}</p>
-            </div>
 
-            {/* 3. Uncompleted */}
-            <div className={`p-5 rounded-3xl border shadow-xl space-y-2 transition hover:scale-[1.02] ${
-              isDark
-                ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
-                : 'bg-white border-slate-200 shadow-md'
-            }`}>
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-base">
-                ⏳
+              {/* 2. In Progress / Ongoing */}
+              <div className={`p-5 rounded-3xl border shadow-xl space-y-2 transition hover:scale-[1.02] ${
+                isDark
+                  ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                  : 'bg-white border-slate-200 shadow-md'
+              }`}>
+                <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-base">
+                  ⚡
+                </div>
+                <p className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>In Progress</p>
+                <p className="text-3xl font-black text-purple-400">{inProgressCount}</p>
               </div>
-              <p className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Uncompleted</p>
-              <p className="text-3xl font-black text-amber-400">{uncompletedCount}</p>
-            </div>
 
-            {/* 4. Ongoing */}
-            <div className={`p-5 rounded-3xl border shadow-xl space-y-2 transition hover:scale-[1.02] ${
-              isDark
-                ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
-                : 'bg-white border-slate-200 shadow-md'
-            }`}>
-              <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-base">
-                ⚡
+              {/* 3. Completed */}
+              <div className={`p-5 rounded-3xl border shadow-xl space-y-2 transition hover:scale-[1.02] ${
+                isDark
+                  ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                  : 'bg-white border-slate-200 shadow-md'
+              }`}>
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-base">
+                  ✅
+                </div>
+                <p className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Completed</p>
+                <p className="text-3xl font-black text-emerald-400">{completedCount}</p>
               </div>
-              <p className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Ongoing</p>
-              <p className="text-3xl font-black text-purple-400">{ongoingCount}</p>
-            </div>
 
-            {/* 5. Completed */}
-            <div className={`p-5 rounded-3xl border shadow-xl space-y-2 transition hover:scale-[1.02] col-span-2 lg:col-span-1 ${
-              isDark
-                ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
-                : 'bg-white border-slate-200 shadow-md'
-            }`}>
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-base">
-                ✅
+              {/* 4. Skipped */}
+              <div className={`p-5 rounded-3xl border shadow-xl space-y-2 transition hover:scale-[1.02] ${
+                isDark
+                  ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                  : 'bg-white border-slate-200 shadow-md'
+              }`}>
+                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-base">
+                  ⏩
+                </div>
+                <p className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Skipped</p>
+                <p className="text-3xl font-black text-amber-400">{skippedCount}</p>
               </div>
-              <p className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Completed</p>
-              <p className="text-3xl font-black text-emerald-400">{completedCount}</p>
-            </div>
 
+              {/* 5. Hidden */}
+              <div className={`p-5 rounded-3xl border shadow-xl space-y-2 transition hover:scale-[1.02] ${
+                isDark
+                  ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+                  : 'bg-white border-slate-200 shadow-md'
+              }`}>
+                <div className="w-9 h-9 rounded-xl bg-zinc-500/10 border border-zinc-500/20 flex items-center justify-center text-zinc-400 text-base">
+                  👁️
+                </div>
+                <p className={`text-xs font-bold ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Hidden</p>
+                <p className="text-3xl font-black text-zinc-400">{hiddenCount}</p>
+              </div>
+
+            </div>
           </div>
 
           {/* Leaderboard Score & Timing Banner Grid */}
