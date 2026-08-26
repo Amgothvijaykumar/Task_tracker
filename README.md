@@ -43,6 +43,24 @@ npm run dev
 
 Open the URL shown by Vite, normally `http://localhost:5173`. The page confirms the Django health endpoint once both servers are running.
 
+## Docker setup
+
+Docker Compose runs the Django API and serves the production React build through Nginx:
+
+```bash
+# Run from the repository root
+docker compose --env-file frontend/.env up --build
+```
+
+Open `http://localhost:5173`. The API is available at `http://localhost:8000`.
+The Compose setup uses the local SQLite database at `backend/db.sqlite3` and runs migrations when the backend starts.
+
+To stop the containers:
+
+```bash
+docker compose down
+```
+
 ## Project structure
 
 ```text

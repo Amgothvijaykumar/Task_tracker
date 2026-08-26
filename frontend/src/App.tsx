@@ -1,31 +1,57 @@
-import { useEffect, useState } from 'react'
-import { apiUrl } from './lib/api'
-
-type HealthResponse = { status: string; service: string }
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
+import { ThemeProvider } from './contexts/ThemeContext'
+import { ProtectedRoute } from './components/ProtectedRoute'
+import { LandingPage } from './pages/LandingPage'
+import { LoginPage } from './pages/LoginPage'
+import { AuthCallbackPage } from './pages/AuthCallbackPage'
+import { StudentDashboard } from './pages/StudentDashboard'
+import { StudentProfilePage } from './pages/StudentProfilePage'
+import { AdminPanel } from './pages/AdminPanel'
+import { UnauthorizedPage } from './pages/UnauthorizedPage'
 
 export default function App() {
-  const [apiState, setApiState] = useState('Checking API connection…')
-
-  useEffect(() => {
-    fetch(apiUrl('/health/'))
-      .then(async (response) => {
-        if (!response.ok) throw new Error('The API did not respond successfully.')
-        return (await response.json()) as HealthResponse
-      })
-      .then((data) => setApiState(`${data.service} is ${data.status}`))
-      .catch(() => setApiState('API not connected yet — follow the setup guide to start Django.'))
-  }, [])
-
   return (
-    <main className="page-shell">
-      <section className="hero" aria-labelledby="page-title">
-        <p className="eyebrow">DSA DAILY TRACKER</p>
-        <h1 id="page-title">Build a stronger coding habit, one problem at a time.</h1>
-        <p className="intro">
-          The React and Django foundation is ready. Authentication, dashboards, and daily problem tracking will be added in the next approved steps.
-        </p>
-        <p className="api-status" role="status">{apiState}</p>
-      </section>
-    </main>
+    <Router>
+      <ThemeProvider>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/unauthorized" element={<UnauthorizedPage />} />
+            
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <StudentDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <StudentProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminPanel />
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AuthProvider>
+      </ThemeProvider>
+    </Router>
   )
 }
