@@ -266,11 +266,17 @@ def student_activity_row(student: User, selected_date=None) -> dict:
     streaks = calculate_streaks(student.id, selected_date)
     rank_and_score = calculate_student_rank_and_score(student.id)
     start, end = local_day_bounds(selected_date)
+
     today_completions = StudentProblemProgress.objects.filter(
         student=student,
         status='completed',
         completed_at__gte=start,
         completed_at__lt=end,
+    ).count()
+
+    total_completed = StudentProblemProgress.objects.filter(
+        student=student,
+        status='completed',
     ).count()
 
     last_completion = (
@@ -284,18 +290,45 @@ def student_activity_row(student: User, selected_date=None) -> dict:
         .first()
     )
 
+    # Completed Problem History (optimized query)
+    completed_records = (
+        StudentProblemProgress.objects.filter(student=student, status='completed')
+        .select_related('problem')
+        .order_by('-completed_at')[:20]
+    )
+
+    history = []
+    for record in completed_records:
+        earned = calculate_problem_score(record.problem.scheduled_date, record.completed_at)
+        history.append({
+            'problem_id': record.problem_id,
+            'title': record.problem.title,
+            'difficulty': record.problem.difficulty,
+            'scheduled_date': record.problem.scheduled_date.isoformat(),
+            'completed_at': record.completed_at.isoformat() if record.completed_at else None,
+            'earned_score': earned,
+        })
+
     return {
         'id': student.id,
         'name': student.name,
         'email': student.email,
         'status': student.status,
+        'role': student.role,
+        'created_at': student.created_at.isoformat() if student.created_at else None,
+        'linkedin_url': getattr(student, 'linkedin_url', None),
+        'github_url': getattr(student, 'github_url', None),
+        'twitter_url': getattr(student, 'twitter_url', None),
+        'instagram_handle': getattr(student, 'instagram_handle', None),
         'today_completions': today_completions,
+        'total_completed': total_completed,
         'current_streak': streaks['current_streak'],
         'longest_streak': streaks['longest_streak'],
         'total_score': rank_and_score['total_score'],
         'rank': rank_and_score['rank'],
         'rank_label': rank_and_score['rank_label'],
         'last_completion': last_completion.isoformat() if last_completion else None,
+        'completed_history': history,
     }
 
 

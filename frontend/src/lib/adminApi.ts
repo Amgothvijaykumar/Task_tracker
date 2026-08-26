@@ -69,15 +69,35 @@ export interface AdminAnalytics {
   trends: TrendDay[]
 }
 
+export interface CompletedHistoryItem {
+  problem_id: number
+  title: string
+  difficulty: string
+  scheduled_date: string
+  completed_at: string | null
+  earned_score: number
+}
+
 export interface StudentActivity {
   id: string
   name: string
   email: string
   status: string
+  role?: string
+  created_at?: string | null
+  linkedin_url?: string | null
+  github_url?: string | null
+  twitter_url?: string | null
+  instagram_handle?: string | null
   today_completions: number
+  total_completed?: number
   current_streak: number
   longest_streak: number
+  total_score?: number
+  rank?: number
+  rank_label?: string
   last_completion: string | null
+  completed_history?: CompletedHistoryItem[]
 }
 
 export interface ProblemFilters {
@@ -174,18 +194,18 @@ export function formatDate(dateStr: string): string {
 
 export function difficultyColor(difficulty: string): string {
   switch (difficulty) {
-    case 'Easy': return 'bg-green-100 text-green-800'
-    case 'Medium': return 'bg-yellow-100 text-yellow-800'
-    case 'Hard': return 'bg-red-100 text-red-800'
-    default: return 'bg-gray-100 text-gray-800'
+    case 'Easy': return 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/80'
+    case 'Medium': return 'bg-amber-950/80 text-amber-400 border border-amber-800/80'
+    case 'Hard': return 'bg-rose-950/80 text-rose-400 border border-rose-800/80'
+    default: return 'bg-zinc-900 text-zinc-400 border border-zinc-800'
   }
 }
 
 export function statusColor(status: string): string {
   switch (status) {
-    case 'published': return 'bg-green-100 text-green-800'
-    case 'draft': return 'bg-gray-100 text-gray-800'
-    case 'archived': return 'bg-orange-100 text-orange-800'
-    default: return 'bg-gray-100 text-gray-800'
+    case 'published': return 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/80'
+    case 'draft': return 'bg-zinc-900 text-zinc-400 border border-zinc-800'
+    case 'archived': return 'bg-amber-950/80 text-amber-400 border border-amber-800/80'
+    default: return 'bg-zinc-900 text-zinc-400 border border-zinc-800'
   }
 }
