@@ -6,12 +6,13 @@ import { AdminAnalytics, fetchAdminAnalytics, formatDate, todayIST } from '../li
 import { AdminOverview } from '../components/admin/AdminOverview'
 import { AdminProblems } from '../components/admin/AdminProblems'
 import { AdminStudents } from '../components/admin/AdminStudents'
+import { ThemeToggle } from '../components/ThemeToggle'
 
 type Tab = 'overview' | 'problems' | 'students'
 
 export function AdminPanel() {
   const { userProfile, signOut, getToken } = useAuth()
-  const { theme, toggleTheme } = useTheme()
+  const { theme } = useTheme()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<Tab>('overview')
   const [selectedDate, setSelectedDate] = useState(todayIST())
@@ -211,20 +212,9 @@ export function AdminPanel() {
             </div>
           </div>
 
-          {/* RIGHT SIDE: Theme Toggle Switch & Sign Out */}
+          {/* RIGHT SIDE: Skeuomorphic Theme Toggle Switch with Burnout & Sign Out */}
           <div className="flex items-center gap-3">
-            {/* Dark/Light Mode Toggle Switch */}
-            <button
-              onClick={toggleTheme}
-              className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl border flex items-center gap-2 transition ${
-                isDark
-                  ? 'bg-zinc-900 hover:bg-zinc-800 text-amber-300 border-zinc-800'
-                  : 'bg-white hover:bg-slate-100 text-indigo-600 border-slate-300 shadow-sm'
-              }`}
-              title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
-            >
-              <span>{isDark ? '☀️ Light' : '🌙 Dark'}</span>
-            </button>
+            <ThemeToggle />
 
             <button
               onClick={handleSignOut}
@@ -249,8 +239,12 @@ export function AdminPanel() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-3.5 px-4 text-xs sm:text-sm font-bold border-b-2 transition flex items-center gap-2 ${
                   activeTab === tab.id
-                    ? isDark ? 'border-rose-500 text-rose-400' : 'border-rose-600 text-rose-600'
-                    : isDark ? 'border-transparent text-zinc-400 hover:text-white' : 'border-transparent text-slate-600 hover:text-slate-900'
+                    ? isDark
+                      ? 'border-rose-500 text-rose-400 bg-rose-950/20'
+                      : 'border-rose-600 text-rose-600 bg-rose-50'
+                    : isDark
+                      ? 'border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
+                      : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
                 <span>{tab.icon}</span>
@@ -261,14 +255,9 @@ export function AdminPanel() {
         </div>
       </div>
 
-      {/* Main Admin Body */}
+      {/* Tab Content Body */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {!token ? (
-          <div className="text-center py-16 text-zinc-500 text-sm">
-            <div className="w-8 h-8 mx-auto mb-3 border-2 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
-            Loading Admin Panel...
-          </div>
-        ) : activeTab === 'overview' ? (
+        {activeTab === 'overview' && (
           <AdminOverview
             data={analytics}
             loading={loading}
@@ -276,14 +265,14 @@ export function AdminPanel() {
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
           />
-        ) : activeTab === 'problems' ? (
+        )}
+
+        {activeTab === 'problems' && token && (
           <AdminProblems token={token} />
-        ) : (
-          <AdminStudents
-            token={token}
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-          />
+        )}
+
+        {activeTab === 'students' && token && (
+          <AdminStudents token={token} selectedDate={selectedDate} onDateChange={setSelectedDate} />
         )}
       </main>
     </div>

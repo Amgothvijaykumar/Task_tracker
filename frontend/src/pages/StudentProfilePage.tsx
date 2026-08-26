@@ -2,11 +2,12 @@ import { FormEvent, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
+import { ThemeToggle } from '../components/ThemeToggle'
 import { StudentSummary, fetchStudentFeed, todayIST } from '../lib/studentApi'
 
 export function StudentProfilePage() {
   const { userProfile, updateUserProfile, signOut, getToken } = useAuth()
-  const { theme, toggleTheme } = useTheme()
+  const { theme } = useTheme()
   const navigate = useNavigate()
 
   const [name, setName] = useState('')
@@ -227,17 +228,7 @@ export function StudentProfilePage() {
               ← Dashboard
             </button>
 
-            <button
-              onClick={toggleTheme}
-              className={`px-3.5 py-1.5 text-xs font-bold rounded-xl border flex items-center gap-2 transition active:scale-95 ${
-                isDark
-                  ? 'bg-[#121218] hover:bg-zinc-800 text-amber-300 border-zinc-700/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]'
-                  : 'bg-white hover:bg-slate-100 text-indigo-600 border-slate-300 shadow-sm'
-              }`}
-              title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
-            >
-              <span>{isDark ? '☀️ Light' : '🌙 Dark'}</span>
-            </button>
+            <ThemeToggle />
 
             <button
               onClick={handleSignOut}
