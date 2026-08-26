@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { createClient, User } from '@supabase/supabase-js'
+import { apiUrl } from '../lib/api'
 
 export interface ProfileUpdates {
   name: string
@@ -81,8 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserProfile = async (userId: string, token: string) => {
     try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
-      const response = await fetch(`${apiUrl}/auth/me/`, {
+      const response = await fetch(apiUrl('/auth/me/'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -111,8 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerUser = async (user: User, token: string) => {
     try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
-      const response = await fetch(`${apiUrl}/auth/register/`, {
+      const response = await fetch(apiUrl('/auth/register/'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -192,8 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = await getToken()
     if (!token) throw new Error('You must be signed in to update your profile.')
 
-    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
-    const response = await fetch(`${apiUrl}/auth/profile/`, {
+    const response = await fetch(apiUrl('/auth/profile/'), {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${token}`,
