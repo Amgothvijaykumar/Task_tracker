@@ -40,6 +40,9 @@ export function ProblemCard({ problem, busy, onAction, onShare }: ProblemCardPro
 
             <span className={`inline-block px-2.5 py-0.5 text-xs font-black rounded-md shadow-sm ${progressStatusColor(status)}`}>
               {progressStatusLabel(status)}
+              {status === 'completed' && problem.earned_score !== undefined && (
+                <span className="ml-1 text-emerald-300 font-black">+{problem.earned_score} pts</span>
+              )}
             </span>
 
             {problem.estimated_minutes && (

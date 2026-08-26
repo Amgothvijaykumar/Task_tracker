@@ -22,6 +22,7 @@ export interface StudentProblem {
   publication_status: string
   tags: StudentTag[]
   my_status: ProgressStatus
+  earned_score?: number
   assigned_at: string | null
   started_at: string | null
   completed_at: string | null
@@ -39,6 +40,7 @@ export interface HistoryItem {
   problem_difficulty: string
   scheduled_date: string
   status: ProgressStatus
+  earned_score?: number
   completed_at: string | null
   updated_at: string
 }
@@ -59,6 +61,10 @@ export interface StudentSummary {
   }
   current_streak: number
   longest_streak: number
+  total_score: number
+  rank: number
+  total_rank_students: number
+  rank_label: string
   streak_note: string
   qualified_dates: string[]
   history: HistoryItem[]
@@ -141,12 +147,12 @@ export function progressStatusLabel(status: ProgressStatus): string {
 
 export function progressStatusColor(status: ProgressStatus): string {
   switch (status) {
-    case 'completed': return 'bg-green-100 text-green-800'
-    case 'started': return 'bg-blue-100 text-blue-800'
-    case 'assigned': return 'bg-indigo-100 text-indigo-800'
-    case 'skipped': return 'bg-yellow-100 text-yellow-800'
-    case 'hidden': return 'bg-gray-100 text-gray-700'
-    default: return 'bg-gray-100 text-gray-600'
+    case 'completed': return 'bg-[#08080c] text-emerald-400 border border-emerald-800/80'
+    case 'started': return 'bg-blue-950/80 text-blue-400 border border-blue-800/60'
+    case 'assigned': return 'bg-indigo-950/80 text-indigo-400 border border-indigo-800/60'
+    case 'skipped': return 'bg-amber-950/80 text-amber-400 border border-amber-800/60'
+    case 'hidden': return 'bg-zinc-900 text-zinc-400 border border-zinc-800'
+    default: return 'bg-zinc-900 text-zinc-400 border border-zinc-800'
   }
 }
 

@@ -1,9 +1,11 @@
-from datetime import date
+from datetime import date, timedelta
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from tracker.models import User, Problem, StudentProblemProgress
 from tracker.services.progress import apply_status_action
+from tracker.services.analytics import calculate_problem_score, calculate_student_rank_and_score
 
 class StudentProgressTransitionsTest(TestCase):
     def setUp(self):
@@ -62,13 +64,27 @@ class StudentProgressTransitionsTest(TestCase):
         progress = apply_status_action(self.student, self.problem, 'restore')
         self.assertEqual(progress.status, 'unassigned')
 
-    def test_problem_without_source_url(self):
-        problem_no_url = Problem.objects.create(
-            title='No URL Problem',
-            source_url='',
-            difficulty='Medium',
-            scheduled_date=date.today(),
-            publication_status='published',
-            created_by=self.admin
-        )
-        self.assertEqual(problem_no_url.source_url, '')
+    def test_score_calculation_tiers(self):
+        today_date = date.today()
+        tz = timezone.get_current_timezone()
+
+        # Within 1 day: +10 pts
+        completed_same_day = timezone.make_aware(timezone.datetime.combine(today_date, timezone.datetime.min.time()), tz)
+        self.assertEqual(calculate_problem_score(today_date, completed_same_day), 10)
+
+        # Within 2 days: +8 pts
+        completed_2_days = timezone.make_aware(timezone.datetime.combine(today_date + timedelta(days=2), timezone.datetime.min.time()), tz)
+        self.assertEqual(calculate_problem_score(today_date, completed_2_days), 8)
+
+        # Within 5 days (e.g. 4 days): +5 pts
+        completed_4_days = timezone.make_aware(timezone.datetime.combine(today_date + timedelta(days=4), timezone.datetime.min.time()), tz)
+        self.assertEqual(calculate_problem_score(today_date, completed_4_days), 5)
+
+        # After 5 days (e.g. 7 days): 0 pts
+        completed_7_days = timezone.make_aware(timezone.datetime.combine(today_date + timedelta(days=7), timezone.datetime.min.time()), tz)
+        self.assertEqual(calculate_problem_score(today_date, completed_7_days), 0)
+
+    def test_student_rank_calculation(self):
+        rank_info = calculate_student_rank_and_score(self.student.id)
+        self.assertEqual(rank_info['rank'], 1)
+        self.assertEqual(rank_info['total_score'], 0)

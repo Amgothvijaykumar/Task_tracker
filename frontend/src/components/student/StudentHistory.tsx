@@ -19,7 +19,7 @@ export function StudentHistory({ qualifiedDates, history }: StudentHistoryProps)
     }`}>
       <div>
         <h3 className={`text-2xl font-black tracking-tight ${isDark ? 'text-white drop-shadow-sm' : 'text-slate-900'}`}>
-          Progress History & Qualified Days
+          Progress History & Points Earned
         </h3>
         <p className={`text-xs mt-1 ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
           Qualified days are local calendar days (IST) with at least one completion.
@@ -65,9 +65,18 @@ export function StudentHistory({ qualifiedDates, history }: StudentHistoryProps)
                   Scheduled {formatDate(item.scheduled_date)}
                 </p>
               </div>
-              <span className={`inline-block px-3 py-0.5 text-xs font-black rounded-lg self-start shadow-sm ${progressStatusColor(item.status)}`}>
-                {progressStatusLabel(item.status)}
-              </span>
+
+              <div className="flex items-center gap-2">
+                {item.status === 'completed' && item.earned_score !== undefined && (
+                  <span className="text-xs font-black text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-md border border-emerald-800/80">
+                    +{item.earned_score} pts
+                  </span>
+                )}
+
+                <span className={`inline-block px-3 py-0.5 text-xs font-black rounded-lg self-start shadow-sm ${progressStatusColor(item.status)}`}>
+                  {progressStatusLabel(item.status)}
+                </span>
+              </div>
             </li>
           ))}
         </ul>

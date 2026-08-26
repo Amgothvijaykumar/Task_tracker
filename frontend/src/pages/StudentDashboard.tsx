@@ -105,12 +105,13 @@ export function StudentDashboard() {
     .toUpperCase()
     .slice(0, 2)
 
-  // Compute Overview Stats
+  // Compute Overview Stats directly from Backend Ranking Engine
   const totalProblems = data?.problems.length || 0
   const solvedCount = data?.problems.filter((p) => p.my_status === 'completed').length || (data?.daily_goal?.completed ?? 0)
   const unsolvedCount = Math.max(0, totalProblems - solvedCount)
-  const userScore = solvedCount * 10 + (data?.current_streak || 0) * 15
-  const userRank = solvedCount > 0 ? '#4 Active Solver' : '#12 Aspirant'
+
+  const userScore = data?.total_score ?? 0
+  const userRankLabel = data?.rank_label ?? (solvedCount > 0 ? 'Rank #1 of 1' : 'Unranked')
 
   const isDark = theme === 'dark'
 
@@ -118,7 +119,7 @@ export function StudentDashboard() {
     <div className={`min-h-screen font-sans transition-colors duration-300 ${
       isDark ? 'bg-[#050506] text-white selection:bg-blue-600 selection:text-white' : 'bg-slate-50 text-slate-900 selection:bg-blue-500 selection:text-white'
     }`}>
-      {/* 1. Header / Profile Navbar (Skeuomorphic Left-Aligned Interactive Profile Dropdown) */}
+      {/* 1. Header / Profile Navbar */}
       <header className={`sticky top-0 z-50 backdrop-blur-md border-b transition-colors duration-300 ${
         isDark
           ? 'bg-[#09090b]/90 border-zinc-800/80 shadow-[inset_0_-1px_0_rgba(255,255,255,0.05),0_4px_20px_rgba(0,0,0,0.8)]'
@@ -177,7 +178,7 @@ export function StudentDashboard() {
                     </div>
                   </div>
 
-                  {/* OVERVIEW STATS GRID (Problems Solved, Unsolved, Score, Rank) */}
+                  {/* OVERVIEW STATS GRID */}
                   <div>
                     <p className={`text-xs font-black uppercase tracking-wider mb-3 ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
                       Tactile Overview
@@ -212,7 +213,7 @@ export function StudentDashboard() {
                         <p className="text-[10px] text-zinc-500">Pending tasks</p>
                       </div>
 
-                      {/* Score */}
+                      {/* Dynamic Score */}
                       <div className={`p-3.5 rounded-2xl border space-y-1 ${
                         isDark
                           ? 'bg-[#08080c] border-zinc-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]'
@@ -223,10 +224,10 @@ export function StudentDashboard() {
                           <span>⚡</span>
                         </div>
                         <p className="text-2xl font-black text-blue-400 drop-shadow-sm">{userScore} <span className="text-xs font-normal text-zinc-400">pts</span></p>
-                        <p className="text-[10px] text-zinc-500">Activity score</p>
+                        <p className="text-[10px] text-zinc-500">Earned score</p>
                       </div>
 
-                      {/* Rank */}
+                      {/* Exact Student Rank */}
                       <div className={`p-3.5 rounded-2xl border space-y-1 ${
                         isDark
                           ? 'bg-[#08080c] border-zinc-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]'
@@ -236,8 +237,8 @@ export function StudentDashboard() {
                           <span>Rank</span>
                           <span>🏆</span>
                         </div>
-                        <p className="text-xs font-extrabold text-purple-400 truncate drop-shadow-sm">{userRank}</p>
-                        <p className="text-[10px] text-zinc-500">Community rank</p>
+                        <p className="text-xs font-black text-purple-400 truncate drop-shadow-sm">{userRankLabel}</p>
+                        <p className="text-[10px] text-zinc-500">Global Leaderboard</p>
                       </div>
                     </div>
                   </div>
@@ -300,7 +301,7 @@ export function StudentDashboard() {
 
           {/* RIGHT SIDE: Theme Toggle Switch & Sign Out */}
           <div className="flex items-center gap-3">
-            {/* Skeuomorphic Dark/Light Mode Toggle Switch */}
+            {/* Dark/Light Mode Toggle Switch */}
             <button
               onClick={toggleTheme}
               className={`px-3.5 py-1.5 text-xs font-bold rounded-xl border flex items-center gap-2 transition active:scale-95 ${
@@ -345,8 +346,8 @@ export function StudentDashboard() {
           </p>
         </div>
 
-        {/* 3. Tactile Skeuomorphic Top Stats Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* 3. Top Stats & Score Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           
           {/* Daily Goal Card */}
           <div className={`p-6 rounded-3xl border shadow-xl space-y-3 transition hover:scale-[1.02] ${
@@ -373,11 +374,42 @@ export function StudentDashboard() {
                 style={{ width: `${goalPercent}%` }}
               ></div>
             </div>
-            {goal && !goal.qualified && (
-              <p className={`text-[11px] leading-tight ${isDark ? 'text-zinc-500' : 'text-slate-500'}`}>
-                This is a nudge to keep momentum — complete any problem to mark today qualified.
-              </p>
-            )}
+          </div>
+
+          {/* Dynamic Score Card */}
+          <div className={`p-6 rounded-3xl border shadow-xl space-y-3 transition hover:scale-[1.02] ${
+            isDark
+              ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_10px_25px_-5px_rgba(0,0,0,0.8)]'
+              : 'bg-white border-slate-200 shadow-md'
+          }`}>
+            <div className={`flex items-center justify-between text-xs font-black uppercase tracking-wider ${
+              isDark ? 'text-zinc-400' : 'text-slate-500'
+            }`}>
+              <span>Total Score</span>
+              <span>⚡</span>
+            </div>
+            <div className="text-4xl font-black text-amber-400 drop-shadow-sm">
+              {userScore} <span className={`text-xl font-normal ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>pts</span>
+            </div>
+            <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-slate-600'}`}>Earned from timed problem completions</p>
+          </div>
+
+          {/* Student Rank Card */}
+          <div className={`p-6 rounded-3xl border shadow-xl space-y-3 transition hover:scale-[1.02] ${
+            isDark
+              ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_10px_25px_-5px_rgba(0,0,0,0.8)]'
+              : 'bg-white border-slate-200 shadow-md'
+          }`}>
+            <div className={`flex items-center justify-between text-xs font-black uppercase tracking-wider ${
+              isDark ? 'text-zinc-400' : 'text-slate-500'
+            }`}>
+              <span>Leaderboard Rank</span>
+              <span>🏆</span>
+            </div>
+            <div className="text-2xl font-black text-purple-400 drop-shadow-sm pt-1">
+              {userRankLabel}
+            </div>
+            <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-slate-600'}`}>Calculated relative to all students</p>
           </div>
 
           {/* Current Streak Card */}
@@ -395,30 +427,32 @@ export function StudentDashboard() {
             <div className="text-4xl font-black text-emerald-400 drop-shadow-sm">
               {data?.current_streak ?? 0} <span className={`text-xl font-normal ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>days</span>
             </div>
-            <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-slate-600'}`}>{data?.streak_note || 'Keep your daily streak alive!'}</p>
-          </div>
-
-          {/* Longest Streak Card */}
-          <div className={`p-6 rounded-3xl border shadow-xl space-y-3 transition hover:scale-[1.02] ${
-            isDark
-              ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_10px_25px_-5px_rgba(0,0,0,0.8)]'
-              : 'bg-white border-slate-200 shadow-md'
-          }`}>
-            <div className={`flex items-center justify-between text-xs font-black uppercase tracking-wider ${
-              isDark ? 'text-zinc-400' : 'text-slate-500'
-            }`}>
-              <span>Longest Streak</span>
-              <span>🏆</span>
-            </div>
-            <div className="text-4xl font-black text-purple-400 drop-shadow-sm">
-              {data?.longest_streak ?? 0} <span className={`text-xl font-normal ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>days</span>
-            </div>
-            <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-slate-600'}`}>Your personal best streak</p>
+            <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-slate-600'}`}>{data?.streak_note || 'Keep your streak alive!'}</p>
           </div>
 
         </div>
 
-        {/* 4. Problem Feed Container */}
+        {/* 4. Scoring Rules Legend Banner */}
+        <div className={`p-5 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs ${
+          isDark ? 'bg-blue-950/40 border-blue-800/50 text-blue-200' : 'bg-blue-50 border-blue-200 text-blue-900'
+        }`}>
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">⚡</span>
+            <div>
+              <p className="font-black text-sm">Scoring Rules & Timing Tiers</p>
+              <p className="opacity-80">Solve faster after problem post to maximize your rank on the leaderboard!</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 font-bold">
+            <span className="px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-800/80">Within 1 Day: +10 pts</span>
+            <span className="px-2.5 py-1 rounded-lg bg-blue-950 text-blue-300 border border-blue-800/80">Within 2 Days: +8 pts</span>
+            <span className="px-2.5 py-1 rounded-lg bg-amber-950 text-amber-300 border border-amber-800/80">Within 5 Days: +5 pts</span>
+            <span className="px-2.5 py-1 rounded-lg bg-zinc-900 text-zinc-400 border border-zinc-800">&gt;5 Days: 0 pts</span>
+          </div>
+        </div>
+
+        {/* 5. Problem Feed Container */}
         <section className={`p-6 sm:p-8 rounded-3xl border shadow-2xl space-y-6 transition ${
           isDark
             ? 'bg-gradient-to-b from-[#16161c] to-[#0c0c10] border-zinc-700/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_12px_30px_-5px_rgba(0,0,0,0.8)]'
@@ -540,17 +574,6 @@ export function StudentDashboard() {
 
           </div>
 
-          {view === 'hidden' && (
-            <div className={`p-4 rounded-2xl border text-xs flex items-center gap-3 ${
-              isDark ? 'bg-emerald-950/40 border-emerald-800/50 text-emerald-300 shadow-inner' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-            }`}>
-              <span className="text-xl">👁️</span>
-              <span>
-                <strong>Hidden Problems:</strong> Items you have hidden are stored here. Click <strong>"View it again"</strong> on any problem card to restore it back to your main feed.
-              </span>
-            </div>
-          )}
-
           {error && (
             <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-800/50 text-rose-300 text-xs">
               {error}
@@ -586,7 +609,7 @@ export function StudentDashboard() {
           )}
         </section>
 
-        {/* 5. Skeuomorphic Progress History Section */}
+        {/* 6. Skeuomorphic Progress History Section */}
         {data && <StudentHistory qualifiedDates={data.qualified_dates} history={data.history} />}
 
       </main>

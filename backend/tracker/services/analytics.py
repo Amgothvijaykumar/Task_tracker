@@ -21,6 +21,81 @@ def active_students():
     return User.objects.filter(role='student', status='active')
 
 
+def calculate_problem_score(scheduled_date, completed_at) -> int:
+    """
+    Calculate points earned for completing a problem:
+    - Within 1 day (same day or 1 day): +10 points
+    - Within 2 days: +8 points
+    - Within 5 days (3 to 5 days): +5 points
+    - Else (more than 5 days): 0 points
+    """
+    if not completed_at or not scheduled_date:
+        return 0
+    completed_date = timezone.localtime(completed_at).date()
+    days_diff = (completed_date - scheduled_date).days
+    if days_diff <= 1:
+        return 10
+    elif days_diff == 2:
+        return 8
+    elif 3 <= days_diff <= 5:
+        return 5
+    else:
+        return 0
+
+
+def calculate_student_score(student_id: str) -> int:
+    """Calculate total score for a student across all completed problems."""
+    records = StudentProblemProgress.objects.filter(
+        student_id=student_id,
+        status='completed',
+        completed_at__isnull=False,
+    ).select_related('problem')
+
+    total_score = 0
+    for r in records:
+        total_score += calculate_problem_score(r.problem.scheduled_date, r.completed_at)
+    return total_score
+
+
+def calculate_student_rank_and_score(student_id: str) -> dict:
+    """
+    Rank all active students based on total score (primary), streak (secondary).
+    Returns dict with student_score, rank, total_students, rank_label.
+    """
+    students = list(active_students())
+    student_scores = []
+
+    for s in students:
+        score = calculate_student_score(s.id)
+        streaks = calculate_streaks(s.id, local_today())
+        student_scores.append({
+            'id': s.id,
+            'name': s.name,
+            'score': score,
+            'streak': streaks['current_streak'],
+        })
+
+    # Sort descending by score, then by streak, then by name
+    student_scores.sort(key=lambda x: (-x['score'], -x['streak'], x['name']))
+
+    total_count = len(student_scores)
+    target_rank = 1
+    my_score = 0
+
+    for idx, s in enumerate(student_scores, start=1):
+        if s['id'] == student_id:
+            target_rank = idx
+            my_score = s['score']
+            break
+
+    return {
+        'total_score': my_score,
+        'rank': target_rank,
+        'total_rank_students': max(total_count, 1),
+        'rank_label': f"Rank #{target_rank} of {max(total_count, 1)}",
+    }
+
+
 def get_qualified_dates(student_id: str) -> set:
     """Return set of dates on which the student completed at least one problem."""
     completions = (
@@ -189,6 +264,7 @@ def student_activity_row(student: User, selected_date=None) -> dict:
         selected_date = local_today()
 
     streaks = calculate_streaks(student.id, selected_date)
+    rank_and_score = calculate_student_rank_and_score(student.id)
     start, end = local_day_bounds(selected_date)
     today_completions = StudentProblemProgress.objects.filter(
         student=student,
@@ -216,6 +292,9 @@ def student_activity_row(student: User, selected_date=None) -> dict:
         'today_completions': today_completions,
         'current_streak': streaks['current_streak'],
         'longest_streak': streaks['longest_streak'],
+        'total_score': rank_and_score['total_score'],
+        'rank': rank_and_score['rank'],
+        'rank_label': rank_and_score['rank_label'],
         'last_completion': last_completion.isoformat() if last_completion else None,
     }
 

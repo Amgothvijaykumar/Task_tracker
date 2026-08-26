@@ -3,7 +3,13 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from tracker.models import Problem, StudentProblemProgress
-from tracker.services.analytics import calculate_streaks, local_day_bounds, local_today
+from tracker.services.analytics import (
+    calculate_problem_score,
+    calculate_streaks,
+    calculate_student_rank_and_score,
+    local_day_bounds,
+    local_today,
+)
 
 ALLOWED_TRANSITIONS = {
     'assign': {'unassigned', 'skipped'},
@@ -100,6 +106,7 @@ def student_summary(student, selected_date=None) -> dict:
         selected_date = local_today()
 
     streaks = calculate_streaks(student.id, local_today())
+    rank_and_score = calculate_student_rank_and_score(student.id)
     completions_today = completions_on_date(student, local_today())
     completions_selected = completions_on_date(student, selected_date)
     qualified_today = completions_today >= 1
@@ -116,6 +123,7 @@ def student_summary(student, selected_date=None) -> dict:
         .order_by('-updated_at')[:100]
     )
     for record in records:
+        earned = calculate_problem_score(record.problem.scheduled_date, record.completed_at) if record.status == 'completed' else 0
         history.append({
             'id': record.id,
             'problem_id': record.problem_id,
@@ -123,6 +131,7 @@ def student_summary(student, selected_date=None) -> dict:
             'problem_difficulty': record.problem.difficulty,
             'scheduled_date': record.problem.scheduled_date.isoformat(),
             'status': record.status,
+            'earned_score': earned,
             'completed_at': record.completed_at.isoformat() if record.completed_at else None,
             'updated_at': record.updated_at.isoformat(),
         })
@@ -143,6 +152,10 @@ def student_summary(student, selected_date=None) -> dict:
         },
         'current_streak': streaks['current_streak'],
         'longest_streak': streaks['longest_streak'],
+        'total_score': rank_and_score['total_score'],
+        'rank': rank_and_score['rank'],
+        'total_rank_students': rank_and_score['total_rank_students'],
+        'rank_label': rank_and_score['rank_label'],
         'streak_note': (
             'Current streak counts consecutive qualified days ending today, '
             'or yesterday if you have not completed a problem yet today.'
@@ -170,6 +183,8 @@ def serialize_feed_item(problem, progress, student=None) -> dict:
     if status == 'completed' and student is not None:
         share_draft = build_share_draft(student, problem)
 
+    earned_score = calculate_problem_score(problem.scheduled_date, progress.completed_at) if progress and status == 'completed' else 0
+
     return {
         'id': problem.id,
         'title': problem.title,
@@ -181,6 +196,7 @@ def serialize_feed_item(problem, progress, student=None) -> dict:
         'publication_status': problem.publication_status,
         'tags': [{'id': t.id, 'name': t.name, 'slug': t.slug} for t in problem.tags.all()],
         'my_status': status,
+        'earned_score': earned_score,
         'assigned_at': progress.assigned_at.isoformat() if progress and progress.assigned_at else None,
         'started_at': progress.started_at.isoformat() if progress and progress.started_at else None,
         'completed_at': progress.completed_at.isoformat() if progress and progress.completed_at else None,
