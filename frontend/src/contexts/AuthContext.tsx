@@ -1,6 +1,14 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { createClient, User } from '@supabase/supabase-js'
 
+export interface ProfileUpdates {
+  name: string
+  linkedin_url?: string | null
+  github_url?: string | null
+  twitter_url?: string | null
+  instagram_handle?: string | null
+}
+
 interface AuthContextType {
   user: User | null
   userProfile: any | null
@@ -8,7 +16,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, name: string) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signInWithGoogle: () => Promise<void>
-  updateUserProfile: (updates: { name: string; linkedin_url: string | null }) => Promise<void>
+  updateUserProfile: (updates: ProfileUpdates) => Promise<void>
   signOut: () => Promise<void>
   getToken: () => Promise<string | null>
 }
@@ -180,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error
   }
 
-  const updateUserProfile = async (updates: { name: string; linkedin_url: string | null }) => {
+  const updateUserProfile = async (updates: ProfileUpdates) => {
     const token = await getToken()
     if (!token) throw new Error('You must be signed in to update your profile.')
 

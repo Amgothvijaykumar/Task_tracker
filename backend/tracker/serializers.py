@@ -7,7 +7,11 @@ from .models import Tag, Problem, User, StudentProblemProgress, DailyActivitySum
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'name', 'role', 'status', 'linkedin_url', 'created_at']
+        fields = [
+            'id', 'email', 'name', 'role', 'status',
+            'linkedin_url', 'github_url', 'twitter_url', 'instagram_handle',
+            'created_at'
+        ]
         read_only_fields = ['id', 'created_at']
 
 

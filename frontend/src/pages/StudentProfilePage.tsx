@@ -12,6 +12,10 @@ export function StudentProfilePage() {
 
   const [name, setName] = useState('')
   const [linkedinUrl, setLinkedinUrl] = useState('')
+  const [githubUrl, setGithubUrl] = useState('')
+  const [twitterUrl, setTwitterUrl] = useState('')
+  const [instagramHandle, setInstagramHandle] = useState('')
+
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -25,6 +29,9 @@ export function StudentProfilePage() {
   useEffect(() => {
     setName(userProfile?.name ?? '')
     setLinkedinUrl(userProfile?.linkedin_url ?? '')
+    setGithubUrl(userProfile?.github_url ?? '')
+    setTwitterUrl(userProfile?.twitter_url ?? '')
+    setInstagramHandle(userProfile?.instagram_handle ?? '')
   }, [userProfile])
 
   useEffect(() => {
@@ -57,8 +64,11 @@ export function StudentProfilePage() {
       await updateUserProfile({
         name: name.trim(),
         linkedin_url: linkedinUrl.trim() || null,
+        github_url: githubUrl.trim() || null,
+        twitter_url: twitterUrl.trim() || null,
+        instagram_handle: instagramHandle.trim() || null,
       })
-      setMessage('Profile updated successfully.')
+      setMessage('Profile and social handles updated successfully.')
     } catch (err: any) {
       setError(err.message || 'Unable to update profile.')
     } finally {
@@ -90,7 +100,7 @@ export function StudentProfilePage() {
     <div className={`min-h-screen font-sans transition-colors duration-300 ${
       isDark ? 'bg-[#050506] text-white selection:bg-blue-600 selection:text-white' : 'bg-slate-50 text-slate-900 selection:bg-blue-500 selection:text-white'
     }`}>
-      {/* 1. Header / Profile Navbar (Left-Aligned Profile & Theme Switcher) */}
+      {/* 1. Header / Profile Navbar */}
       <header className={`sticky top-0 z-50 backdrop-blur-md border-b transition-colors duration-300 ${
         isDark
           ? 'bg-[#09090b]/90 border-zinc-800/80 shadow-[inset_0_-1px_0_rgba(255,255,255,0.05),0_4px_20px_rgba(0,0,0,0.8)]'
@@ -286,7 +296,7 @@ export function StudentProfilePage() {
           </div>
         </div>
 
-        {/* Tactile Skeuomorphic Personal Information Form */}
+        {/* Tactile Skeuomorphic Personal Information & Social Handles Form */}
         <section className={`p-6 sm:p-10 rounded-3xl border transition space-y-6 ${
           isDark
             ? 'bg-gradient-to-b from-[#181820] to-[#0c0c10] border-zinc-700/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_10px_25px_-5px_rgba(0,0,0,0.8)]'
@@ -294,10 +304,10 @@ export function StudentProfilePage() {
         }`}>
           <div>
             <h3 className={`text-xl font-black tracking-tight ${isDark ? 'text-white drop-shadow-sm' : 'text-slate-900'}`}>
-              Personal Information
+              Personal Information & Social Handles
             </h3>
             <p className={`text-xs mt-1 ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
-              Keep your profile details up to date for M Chaitanya & mentor community reviews.
+              Update your full name and social media handles to sync with the database and community reviews.
             </p>
           </div>
 
@@ -314,78 +324,153 @@ export function StudentProfilePage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="name" className={`block text-xs font-black uppercase tracking-wider mb-2 ${
-                isDark ? 'text-zinc-300' : 'text-slate-700'
-              }`}>
-                Full Name *
-              </label>
-              <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                required
-                disabled={saving}
-                className={`w-full px-4 py-3 text-xs font-medium rounded-xl border focus:outline-none transition ${
-                  isDark
-                    ? 'text-white bg-[#08080c] border-zinc-700/80 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] focus:border-blue-500'
-                    : 'text-slate-900 bg-white border-slate-300 shadow-inner'
-                }`}
-                placeholder="Enter your full name"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="name" className={`block text-xs font-black uppercase tracking-wider mb-2 ${
+                  isDark ? 'text-zinc-300' : 'text-slate-700'
+                }`}>
+                  Full Name *
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  required
+                  disabled={saving}
+                  className={`w-full px-4 py-3 text-xs font-medium rounded-xl border focus:outline-none transition ${
+                    isDark
+                      ? 'text-white bg-[#08080c] border-zinc-700/80 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] focus:border-blue-500'
+                      : 'text-slate-900 bg-white border-slate-300 shadow-inner'
+                  }`}
+                  placeholder="Enter your full name"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="email" className={`block text-xs font-black uppercase tracking-wider mb-2 ${
+                  isDark ? 'text-zinc-300' : 'text-slate-700'
+                }`}>
+                  Email Address
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={userProfile?.email ?? ''}
+                  disabled
+                  className={`w-full px-4 py-3 text-xs font-medium rounded-xl border cursor-not-allowed ${
+                    isDark
+                      ? 'text-zinc-500 bg-[#08080c]/60 border-zinc-800/60'
+                      : 'text-slate-400 bg-slate-100 border-slate-200'
+                  }`}
+                />
+              </div>
             </div>
 
-            <div>
-              <label htmlFor="email" className={`block text-xs font-black uppercase tracking-wider mb-2 ${
-                isDark ? 'text-zinc-300' : 'text-slate-700'
-              }`}>
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={userProfile?.email ?? ''}
-                disabled
-                className={`w-full px-4 py-3 text-xs font-medium rounded-xl border cursor-not-allowed ${
-                  isDark
-                    ? 'text-zinc-500 bg-[#08080c]/60 border-zinc-800/60'
-                    : 'text-slate-400 bg-slate-100 border-slate-200'
-                }`}
-              />
-              <p className={`text-[11px] mt-1.5 ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
-                Email is managed securely by your authentication provider.
-              </p>
+            {/* Social Media Handles Grid */}
+            <div className="pt-2 border-t border-zinc-800/80 space-y-4">
+              <h4 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
+                Social Media Links & Handles
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {/* 1. LinkedIn URL */}
+                <div>
+                  <label htmlFor="linkedin" className={`block text-xs font-bold uppercase tracking-wider mb-1.5 flex items-center gap-2 ${
+                    isDark ? 'text-blue-400' : 'text-blue-600'
+                  }`}>
+                    <span>💼</span> LinkedIn URL (URLField)
+                  </label>
+                  <input
+                    id="linkedin"
+                    type="url"
+                    value={linkedinUrl}
+                    onChange={(event) => setLinkedinUrl(event.target.value)}
+                    placeholder="https://www.linkedin.com/in/username"
+                    disabled={saving}
+                    className={`w-full px-4 py-3 text-xs font-medium rounded-xl border focus:outline-none transition ${
+                      isDark
+                        ? 'text-white bg-[#08080c] border-zinc-700/80 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] focus:border-blue-500'
+                        : 'text-slate-900 bg-white border-slate-300 shadow-inner'
+                    }`}
+                  />
+                </div>
+
+                {/* 2. GitHub URL */}
+                <div>
+                  <label htmlFor="github" className={`block text-xs font-bold uppercase tracking-wider mb-1.5 flex items-center gap-2 ${
+                    isDark ? 'text-purple-400' : 'text-purple-600'
+                  }`}>
+                    <span>💻</span> GitHub URL (URLField)
+                  </label>
+                  <input
+                    id="github"
+                    type="url"
+                    value={githubUrl}
+                    onChange={(event) => setGithubUrl(event.target.value)}
+                    placeholder="https://github.com/username"
+                    disabled={saving}
+                    className={`w-full px-4 py-3 text-xs font-medium rounded-xl border focus:outline-none transition ${
+                      isDark
+                        ? 'text-white bg-[#08080c] border-zinc-700/80 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] focus:border-purple-500'
+                        : 'text-slate-900 bg-white border-slate-300 shadow-inner'
+                    }`}
+                  />
+                </div>
+
+                {/* 3. Twitter URL */}
+                <div>
+                  <label htmlFor="twitter" className={`block text-xs font-bold uppercase tracking-wider mb-1.5 flex items-center gap-2 ${
+                    isDark ? 'text-sky-400' : 'text-sky-600'
+                  }`}>
+                    <span>🐦</span> Twitter / X URL (URLField)
+                  </label>
+                  <input
+                    id="twitter"
+                    type="url"
+                    value={twitterUrl}
+                    onChange={(event) => setTwitterUrl(event.target.value)}
+                    placeholder="https://x.com/username"
+                    disabled={saving}
+                    className={`w-full px-4 py-3 text-xs font-medium rounded-xl border focus:outline-none transition ${
+                      isDark
+                        ? 'text-white bg-[#08080c] border-zinc-700/80 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] focus:border-sky-500'
+                        : 'text-slate-900 bg-white border-slate-300 shadow-inner'
+                    }`}
+                  />
+                </div>
+
+                {/* 4. Instagram Handle */}
+                <div>
+                  <label htmlFor="instagram" className={`block text-xs font-bold uppercase tracking-wider mb-1.5 flex items-center gap-2 ${
+                    isDark ? 'text-pink-400' : 'text-pink-600'
+                  }`}>
+                    <span>📸</span> Instagram Handle (CharField)
+                  </label>
+                  <input
+                    id="instagram"
+                    type="text"
+                    value={instagramHandle}
+                    onChange={(event) => setInstagramHandle(event.target.value)}
+                    placeholder="@username"
+                    disabled={saving}
+                    className={`w-full px-4 py-3 text-xs font-medium rounded-xl border focus:outline-none transition ${
+                      isDark
+                        ? 'text-white bg-[#08080c] border-zinc-700/80 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] focus:border-pink-500'
+                        : 'text-slate-900 bg-white border-slate-300 shadow-inner'
+                    }`}
+                  />
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label htmlFor="linkedin" className={`block text-xs font-black uppercase tracking-wider mb-2 ${
-                isDark ? 'text-zinc-300' : 'text-slate-700'
-              }`}>
-                LinkedIn URL (Optional)
-              </label>
-              <input
-                id="linkedin"
-                type="url"
-                value={linkedinUrl}
-                onChange={(event) => setLinkedinUrl(event.target.value)}
-                placeholder="https://www.linkedin.com/in/your-name"
-                disabled={saving}
-                className={`w-full px-4 py-3 text-xs font-medium rounded-xl border focus:outline-none transition ${
-                  isDark
-                    ? 'text-white bg-[#08080c] border-zinc-700/80 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] focus:border-blue-500'
-                    : 'text-slate-900 bg-white border-slate-300 shadow-inner'
-                }`}
-              />
-            </div>
-
-            <div className="pt-2">
+            <div className="pt-4 border-t border-zinc-800/80 flex justify-end">
               <button
                 type="submit"
                 disabled={saving}
-                className="px-6 py-3 text-xs font-black text-white rounded-xl transition shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_4px_14px_rgba(59,130,246,0.4)] bg-gradient-to-b from-blue-500 via-blue-600 to-blue-700 border border-blue-800 active:scale-95 disabled:opacity-50"
+                className="px-8 py-3.5 text-xs font-black text-white rounded-xl transition shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_4px_14px_rgba(59,130,246,0.4)] bg-gradient-to-b from-blue-500 via-blue-600 to-blue-700 border border-blue-800 active:scale-95 disabled:opacity-50"
               >
-                {saving ? 'Saving Changes...' : 'Save Changes'}
+                {saving ? 'Saving Changes...' : 'Save Profile & Social Handles'}
               </button>
             </div>
           </form>
