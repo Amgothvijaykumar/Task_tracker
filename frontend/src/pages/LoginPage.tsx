@@ -87,12 +87,6 @@ export function LoginPage() {
     }
   }
 
-  const fillTestAccount = (testEmail: string, testPass: string) => {
-    setEmail(testEmail)
-    setPassword(testPass)
-    setIsSignUp(false)
-  }
-
   return (
     <main className="page">
       <motion.section
@@ -161,7 +155,7 @@ export function LoginPage() {
             </motion.div>
           </motion.div>
 
-          {/* Transparent text & Auth Overlay */}
+          {/* Transparent text & Liquid Glass Auth Overlay */}
           <motion.div
             className="text-area"
             initial={{ opacity: 0, x: -35 }}
@@ -192,7 +186,12 @@ export function LoginPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="auth-form">
+            {/* LIQUID GLASS AUTH FORM */}
+            <form onSubmit={handleSubmit} className="auth-form liquid-glass">
+              {/* Animated Liquid Gradient Back-Glow */}
+              <div className="liquid-glow-orb" />
+              <div className="liquid-sheen" />
+
               {isSignUp && (
                 <div className="form-group">
                   <label>Full Name</label>
@@ -203,6 +202,7 @@ export function LoginPage() {
                     placeholder="Enter your name"
                     required
                     disabled={loading}
+                    className="liquid-input"
                   />
                 </div>
               )}
@@ -216,6 +216,7 @@ export function LoginPage() {
                   placeholder="your@email.com"
                   required
                   disabled={loading}
+                  className="liquid-input"
                 />
               </div>
 
@@ -228,11 +229,12 @@ export function LoginPage() {
                   placeholder="••••••••"
                   required
                   disabled={loading}
+                  className="liquid-input"
                 />
               </div>
 
               <div className="buttons">
-                <button type="submit" disabled={loading} className="primary-button">
+                <button type="submit" disabled={loading} className="primary-button liquid-btn-primary">
                   {loading ? 'Processing...' : isSignUp ? 'Sign Up' : 'Sign In'}
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M5 12H19M13 6L19 12L13 18" />
@@ -243,7 +245,7 @@ export function LoginPage() {
                   type="button"
                   onClick={handleGoogleSignIn}
                   disabled={loading}
-                  className="secondary-button flex items-center gap-2"
+                  className="secondary-button liquid-btn-secondary flex items-center gap-2"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
                     <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -272,7 +274,7 @@ export function LoginPage() {
         </div>
       </motion.section>
 
-      {/* Embedded CSS styles matching the user design */}
+      {/* Embedded CSS styles matching Liquid Glass design */}
       <style>{`
         * {
           box-sizing: border-box;
@@ -413,16 +415,17 @@ export function LoginPage() {
           gap: 10px;
           width: fit-content;
           margin-bottom: clamp(10px, 1.8vh, 18px);
-          padding: 6px 12px;
-          color: rgba(255, 255, 255, 0.75);
+          padding: 6px 14px;
+          color: rgba(255, 255, 255, 0.85);
           font-size: 10px;
-          font-weight: 650;
+          font-weight: 700;
           letter-spacing: 0.15em;
           text-transform: uppercase;
-          border: 1px solid rgba(255, 255, 255, 0.11);
+          border: 1px solid rgba(255, 255, 255, 0.2);
           border-radius: 999px;
-          background: rgba(255, 255, 255, 0.04);
-          backdrop-filter: blur(14px);
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 100%);
+          backdrop-filter: blur(20px);
+          box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3), 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         .eyebrow > span {
@@ -433,7 +436,7 @@ export function LoginPage() {
           background: #a78bfa;
           box-shadow:
             0 0 10px #a78bfa,
-            0 0 20px rgba(167, 139, 250, 0.7);
+            0 0 20px rgba(167, 139, 250, 0.9);
         }
 
         h1 {
@@ -441,7 +444,7 @@ export function LoginPage() {
           margin: 0;
           color: #f5f5f7;
           font-size: clamp(40px, min(5vw, 8vh), 70px);
-          font-weight: 590;
+          font-weight: 600;
           line-height: 0.92;
           letter-spacing: -0.06em;
         }
@@ -453,8 +456,8 @@ export function LoginPage() {
           background: linear-gradient(
             135deg,
             #ffffff,
-            #b8a5ff 48%,
-            #7565ff
+            #c4b5fd 48%,
+            #8b5cf6
           );
           background-clip: text;
           -webkit-background-clip: text;
@@ -463,7 +466,7 @@ export function LoginPage() {
         .text-area > p {
           max-width: 440px;
           margin: clamp(10px, 1.6vh, 16px) 0 0;
-          color: rgba(255, 255, 255, 0.55);
+          color: rgba(255, 255, 255, 0.65);
           font-size: clamp(12px, 1vw, 14px);
           line-height: 1.55;
         }
@@ -471,73 +474,152 @@ export function LoginPage() {
         .auth-error {
           margin-top: 12px;
           padding: 10px 14px;
-          border-radius: 10px;
-          background: rgba(239, 68, 68, 0.15);
-          border: 1px solid rgba(239, 68, 68, 0.3);
+          border-radius: 12px;
+          background: rgba(239, 68, 68, 0.2);
+          border: 1px solid rgba(239, 68, 68, 0.4);
           color: #fca5a5;
           font-size: 12px;
           max-width: 440px;
+          backdrop-filter: blur(12px);
+          box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2);
         }
 
-        .auth-form {
+        /* LIQUID GLASS AUTH FORM CONTAINER */
+        .auth-form.liquid-glass {
+          position: relative;
+          isolation: isolate;
           margin-top: clamp(14px, 2.2vh, 22px);
           display: flex;
           flex-direction: column;
           gap: clamp(10px, 1.6vh, 16px);
           width: 100%;
           max-width: 440px;
-          padding: 22px;
-          border-radius: 20px;
-          background: rgba(12, 12, 16, 0.5);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          backdrop-filter: blur(18px);
-          box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
+          padding: 26px;
+          border-radius: 26px;
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.12) 0%,
+            rgba(255, 255, 255, 0.02) 40%,
+            rgba(167, 139, 250, 0.06) 70%,
+            rgba(255, 255, 255, 0.08) 100%
+          );
+          backdrop-filter: blur(28px) saturate(200%);
+          -webkit-backdrop-filter: blur(28px) saturate(200%);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          box-shadow:
+            inset 0 1px 1px rgba(255, 255, 255, 0.4),
+            inset 0 -1px 1px rgba(0, 0, 0, 0.3),
+            0 25px 50px -10px rgba(0, 0, 0, 0.7),
+            0 0 40px rgba(167, 139, 250, 0.12);
+          overflow: hidden;
+          transition: border-color 300ms ease, box-shadow 300ms ease;
+        }
+
+        .auth-form.liquid-glass:hover {
+          border-color: rgba(255, 255, 255, 0.26);
+          box-shadow:
+            inset 0 1px 1px rgba(255, 255, 255, 0.5),
+            inset 0 -1px 1px rgba(0, 0, 0, 0.3),
+            0 30px 60px -10px rgba(0, 0, 0, 0.8),
+            0 0 50px rgba(167, 139, 250, 0.2);
+        }
+
+        /* Animated Liquid Glow Orb Behind Glass */
+        .liquid-glow-orb {
+          position: absolute;
+          top: -40px;
+          right: -40px;
+          width: 180px;
+          height: 180px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(167, 139, 250, 0.35) 0%, rgba(99, 102, 241, 0.15) 50%, transparent 80%);
+          filter: blur(30px);
+          pointer-events: none;
+          z-index: -1;
+          animation: liquidMorph 8s infinite ease-in-out alternate;
+        }
+
+        .liquid-sheen {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 40%;
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
+          pointer-events: none;
+          border-radius: 26px 26px 0 0;
+        }
+
+        @keyframes liquidMorph {
+          0% {
+            transform: translate(0, 0) scale(1);
+          }
+          50% {
+            transform: translate(-30px, 40px) scale(1.2);
+          }
+          100% {
+            transform: translate(20px, -20px) scale(0.9);
+          }
         }
 
         .form-group {
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 5px;
+          position: relative;
+          z-index: 2;
         }
 
         .form-group label {
           font-size: 11px;
-          font-weight: 500;
-          color: rgba(255, 255, 255, 0.7);
+          font-weight: 700;
+          color: rgba(255, 255, 255, 0.85);
           text-transform: uppercase;
-          letter-spacing: 0.05em;
+          letter-spacing: 0.06em;
         }
 
-        .form-group input {
+        /* LIQUID GLASS INPUT FIELDS */
+        .liquid-input {
           width: 100%;
-          height: clamp(38px, 4.8vh, 44px);
-          padding: 0 14px;
+          height: clamp(40px, 5vh, 46px);
+          padding: 0 16px;
           color: white;
-          font-size: 13px;
-          border-radius: 10px;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          background: rgba(255, 255, 255, 0.04);
-          backdrop-filter: blur(12px);
+          font-size: 13.5px;
+          font-weight: 500;
+          border-radius: 14px;
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+          backdrop-filter: blur(16px);
           outline: none;
-          transition: border-color 200ms ease;
+          box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+          transition: all 220ms ease;
         }
 
-        .form-group input:focus {
-          border-color: #a78bfa;
-          box-shadow: 0 0 15px rgba(167, 139, 250, 0.2);
+        .liquid-input::placeholder {
+          color: rgba(255, 255, 255, 0.35);
+        }
+
+        .liquid-input:focus {
+          border-color: rgba(167, 139, 250, 0.8);
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(167, 139, 250, 0.08) 100%);
+          box-shadow:
+            inset 0 1px 1px rgba(255, 255, 255, 0.3),
+            0 0 20px rgba(167, 139, 250, 0.35);
         }
 
         .buttons {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
           margin-top: clamp(8px, 1.5vh, 14px);
+          position: relative;
+          z-index: 2;
         }
 
         .primary-button,
         .secondary-button {
-          height: clamp(42px, 5.2vh, 48px);
-          padding: 0 18px;
+          height: clamp(44px, 5.4vh, 50px);
+          padding: 0 20px;
           cursor: pointer;
           border-radius: 999px;
           transition:
@@ -547,103 +629,92 @@ export function LoginPage() {
             box-shadow 220ms ease;
         }
 
-        .primary-button {
+        /* LIQUID GLASS PRIMARY BUTTON */
+        .liquid-btn-primary {
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
-          color: #090909;
-          font-size: 13px;
-          font-weight: 650;
-          border: 0;
-          background: #ffffff;
-          box-shadow: 0 12px 30px rgba(255, 255, 255, 0.13);
+          color: #050508;
+          font-size: 13.5px;
+          font-weight: 800;
+          border: 1px solid rgba(255, 255, 255, 0.8);
+          background: linear-gradient(180deg, #ffffff 0%, #f0f0f5 50%, #e2e2ec 100%);
+          box-shadow:
+            inset 0 1px 1px rgba(255, 255, 255, 0.9),
+            inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+            0 10px 25px rgba(255, 255, 255, 0.2);
           flex: 1;
         }
 
-        .primary-button svg {
+        .liquid-btn-primary svg {
           width: 16px;
           height: 16px;
           fill: none;
           stroke: currentColor;
-          stroke-width: 1.8;
+          stroke-width: 2.2;
           stroke-linecap: round;
           stroke-linejoin: round;
           transition: transform 220ms ease;
         }
 
-        .primary-button:hover {
+        .liquid-btn-primary:hover {
           transform: translateY(-2px);
-          box-shadow: 0 18px 38px rgba(255, 255, 255, 0.19);
+          background: linear-gradient(180deg, #ffffff 0%, #ffffff 100%);
+          box-shadow:
+            inset 0 1px 1px rgba(255, 255, 255, 1),
+            0 15px 35px rgba(255, 255, 255, 0.35);
         }
 
-        .primary-button:hover svg {
-          transform: translateX(3px);
+        .liquid-btn-primary:hover svg {
+          transform: translateX(4px);
         }
 
-        .secondary-button {
-          color: rgba(255, 255, 255, 0.8);
-          font-size: 13px;
-          font-weight: 550;
-          border: 1px solid rgba(255, 255, 255, 0.14);
-          background: rgba(255, 255, 255, 0.04);
-          backdrop-filter: blur(14px);
+        /* LIQUID GLASS SECONDARY BUTTON */
+        .liquid-btn-secondary {
+          color: rgba(255, 255, 255, 0.9);
+          font-size: 13.5px;
+          font-weight: 700;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 100%);
+          backdrop-filter: blur(16px);
+          box-shadow:
+            inset 0 1px 1px rgba(255, 255, 255, 0.3),
+            0 4px 14px rgba(0, 0, 0, 0.4);
         }
 
-        .secondary-button:hover {
+        .liquid-btn-secondary:hover {
           transform: translateY(-2px);
           color: white;
-          border-color: rgba(255, 255, 255, 0.25);
-          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(255, 255, 255, 0.35);
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.08) 100%);
+          box-shadow:
+            inset 0 1px 1px rgba(255, 255, 255, 0.5),
+            0 8px 20px rgba(0, 0, 0, 0.5);
         }
 
         .auth-toggle {
           margin-top: clamp(10px, 1.8vh, 16px);
-          font-size: 12px;
-          color: rgba(255, 255, 255, 0.5);
+          font-size: 12.5px;
+          color: rgba(255, 255, 255, 0.6);
           display: flex;
           align-items: center;
           gap: 6px;
         }
 
         .auth-toggle button {
-          color: #a78bfa;
+          color: #c4b5fd;
           background: none;
           border: none;
           cursor: pointer;
-          font-weight: 600;
+          font-weight: 700;
           padding: 0;
           text-decoration: underline;
+          transition: color 200ms ease;
         }
 
-        .features {
-          display: flex;
-          align-items: center;
-          gap: 20px;
-          margin-top: clamp(14px, 2.5vh, 26px);
-        }
-
-        .features div {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-
-        .features strong {
-          color: rgba(255, 255, 255, 0.88);
-          font-size: 11px;
-          font-weight: 600;
-        }
-
-        .features span {
-          color: rgba(255, 255, 255, 0.35);
-          font-size: 10px;
-        }
-
-        .features i {
-          width: 1px;
-          height: 24px;
-          background: rgba(255, 255, 255, 0.12);
+        .auth-toggle button:hover {
+          color: #ffffff;
         }
 
         .loader-container {
@@ -689,11 +760,13 @@ export function LoginPage() {
           max-width: calc(100% - 36px);
           padding: 12px 14px;
           pointer-events: none;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          border-radius: 16px;
-          background: rgba(8, 8, 10, 0.72);
-          box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
-          backdrop-filter: blur(18px);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          border-radius: 18px;
+          background: linear-gradient(135deg, rgba(12, 12, 16, 0.85) 0%, rgba(20, 20, 28, 0.75) 100%);
+          box-shadow:
+            inset 0 1px 1px rgba(255, 255, 255, 0.2),
+            0 18px 45px rgba(0, 0, 0, 0.5);
+          backdrop-filter: blur(20px);
         }
 
         .live-icon {
@@ -702,9 +775,9 @@ export function LoginPage() {
           width: 31px;
           height: 31px;
           flex-shrink: 0;
-          border: 1px solid rgba(158, 130, 255, 0.2);
+          border: 1px solid rgba(158, 130, 255, 0.3);
           border-radius: 10px;
-          background: rgba(139, 107, 255, 0.14);
+          background: rgba(139, 107, 255, 0.2);
         }
 
         .live-icon span {
@@ -714,7 +787,7 @@ export function LoginPage() {
           background: #a78bfa;
           box-shadow:
             0 0 10px #a78bfa,
-            0 0 20px rgba(167, 139, 250, 0.8);
+            0 0 20px rgba(167, 139, 250, 0.9);
         }
 
         .live-label > div {
@@ -725,14 +798,14 @@ export function LoginPage() {
         }
 
         .live-label strong {
-          color: rgba(255, 255, 255, 0.88);
+          color: rgba(255, 255, 255, 0.95);
           font-size: 11px;
-          font-weight: 600;
+          font-weight: 700;
           white-space: nowrap;
         }
 
         .live-label small {
-          color: rgba(255, 255, 255, 0.38);
+          color: rgba(255, 255, 255, 0.45);
           font-size: 9px;
           white-space: nowrap;
         }
