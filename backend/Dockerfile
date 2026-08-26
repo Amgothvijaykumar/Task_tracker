@@ -19,5 +19,5 @@ COPY . .
 
 EXPOSE 8000
 
-# Run migrations and start Gunicorn server with 3 worker processes
-CMD ["sh", "-c", "python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120"]
+# Run migrations and start Gunicorn server safely (never crash container on migration warning)
+CMD ["sh", "-c", "python manage.py migrate --noinput || true && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120"]

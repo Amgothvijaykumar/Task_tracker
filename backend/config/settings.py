@@ -57,7 +57,6 @@ def database_config() -> dict:
         return {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3'}}
 
     try:
-        # Robust regex pattern for postgresql://user:pass@host:port/dbname
         pattern = r'^postgres(?:ql)?://([^:]+):([^@]+)@([^:/]+)(?::(\d+))?/(.+)$'
         match = re.match(pattern, database_url)
         if match:
@@ -82,7 +81,7 @@ def database_config() -> dict:
             'HOST': host,
             'PORT': port,
             'CONN_MAX_AGE': 60,
-            'OPTIONS': {'sslmode': 'require'},
+            'OPTIONS': {'sslmode': 'require', 'connect_timeout': 10},
         }}
     except Exception as e:
         print(f"Warning: Failed to parse DATABASE_URL ({e}), falling back to SQLite.")
