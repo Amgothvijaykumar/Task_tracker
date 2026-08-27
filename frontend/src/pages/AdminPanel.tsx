@@ -257,9 +257,9 @@ export function AdminPanel() {
         </div>
       </div>
 
-      {/* Tab Content Body */}
+      {/* Tab Content Body - Persistent DOM mounting prevents re-fetching & screen refreshing */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {activeTab === 'overview' && (
+        <div className={activeTab === 'overview' ? 'block' : 'hidden'}>
           <AdminOverview
             data={analytics}
             loading={loading}
@@ -267,14 +267,18 @@ export function AdminPanel() {
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
           />
-        )}
+        </div>
 
-        {activeTab === 'problems' && token && (
-          <AdminProblems token={token} />
-        )}
+        {token && (
+          <>
+            <div className={activeTab === 'problems' ? 'block' : 'hidden'}>
+              <AdminProblems token={token} />
+            </div>
 
-        {activeTab === 'students' && token && (
-          <AdminStudents token={token} selectedDate={selectedDate} onDateChange={setSelectedDate} />
+            <div className={activeTab === 'students' ? 'block' : 'hidden'}>
+              <AdminStudents token={token} selectedDate={selectedDate} onDateChange={setSelectedDate} />
+            </div>
+          </>
         )}
       </main>
     </div>

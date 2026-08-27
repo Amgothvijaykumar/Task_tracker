@@ -622,7 +622,7 @@ export function StudentDashboard() {
               </div>
             )}
 
-            {loading ? (
+            {loading && !data ? (
               <div className={`text-center py-16 text-sm ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
                 <div className="w-8 h-8 mx-auto mb-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                 Loading problems...
