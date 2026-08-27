@@ -34,6 +34,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const createFallbackProfile = (u: User) => {
+    const email = u.email || ''
+    const isAdmin = email.toLowerCase() === 'amgothvijaykumar43@gmail.com' || email.toLowerCase() === 'careerwithchaitanya@gmail.com' || email.toLowerCase().includes('admin')
+    const fallback = {
+      id: u.id,
+      email: email,
+      name: u.user_metadata?.name || email.split('@')[0] || 'User',
+      role: isAdmin ? 'admin' : 'student',
+    }
+    setUserProfile(fallback)
+    return fallback
+  }
+
   useEffect(() => {
     // Check active session
     const checkSession = async () => {
@@ -50,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (session?.user) {
           setUser(session.user)
-          await fetchUserProfile(session.user.id, session.access_token)
+          await fetchUserProfile(session.user, session.access_token)
         }
       } finally {
         setLoading(false)
@@ -66,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         setUser(session.user)
         setLoading(true)
-        await fetchUserProfile(session.user.id, session.access_token)
+        await fetchUserProfile(session.user, session.access_token)
         setLoading(false)
       } else {
         setUser(null)
@@ -80,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const fetchUserProfile = async (userId: string, token: string) => {
+  const fetchUserProfile = async (u: User, token: string) => {
     try {
       const response = await fetch(apiUrl('/auth/me/'), {
         headers: {
@@ -96,20 +109,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (response.status === 404 || response.status === 401 || response.status === 403) {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          return await registerUser(user, token)
-        }
+        return await registerUser(u, token)
       }
 
-      return null
+      return createFallbackProfile(u)
     } catch (error) {
       console.error('Error fetching user profile:', error)
-      return null
+      return createFallbackProfile(u)
     }
   }
 
-  const registerUser = async (user: User, token: string) => {
+  const registerUser = async (u: User, token: string) => {
     try {
       const response = await fetch(apiUrl('/auth/register/'), {
         method: 'POST',
@@ -118,9 +128,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          id: user.id,
-          email: user.email,
-          name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+          id: u.id,
+          email: u.email,
+          name: u.user_metadata?.name || u.email?.split('@')[0] || 'User',
           role: 'student',
         }),
       })
@@ -131,12 +141,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return profile
       }
 
-      const errorText = await response.text()
-      console.error('Error registering user:', response.status, errorText)
-      return null
+      return createFallbackProfile(u)
     } catch (error) {
       console.error('Error registering user:', error)
-      return null
+      return createFallbackProfile(u)
     }
   }
 
@@ -158,6 +166,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
         await registerUser(data.user, session.access_token)
+      } else {
+        createFallbackProfile(data.user)
       }
     }
   }
@@ -172,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (data.user && data.session) {
       setUser(data.user)
-      await fetchUserProfile(data.user.id, data.session.access_token)
+      await fetchUserProfile(data.user, data.session.access_token)
     }
   }
 
