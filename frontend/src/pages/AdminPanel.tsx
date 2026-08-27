@@ -39,7 +39,9 @@ export function AdminPanel() {
 
   const loadAnalytics = useCallback(async () => {
     if (!token) return
-    setLoading(true)
+    if (!analytics) {
+      setLoading(true)
+    }
     setError(null)
     try {
       const data = await fetchAdminAnalytics(token, selectedDate)
@@ -49,7 +51,7 @@ export function AdminPanel() {
     } finally {
       setLoading(false)
     }
-  }, [token, selectedDate])
+  }, [token, selectedDate, analytics])
 
   useEffect(() => {
     if (activeTab === 'overview' && token) {

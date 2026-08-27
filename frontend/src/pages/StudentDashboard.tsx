@@ -60,7 +60,9 @@ export function StudentDashboard() {
 
   const loadFeed = useCallback(async () => {
     if (!token) return
-    setLoading(true)
+    if (!data) {
+      setLoading(true)
+    }
     setError(null)
     try {
       const result = await fetchStudentFeed(token, selectedDate, apiView, difficulty || undefined)
@@ -70,7 +72,7 @@ export function StudentDashboard() {
     } finally {
       setLoading(false)
     }
-  }, [token, selectedDate, apiView, difficulty])
+  }, [token, selectedDate, apiView, difficulty, data])
 
   useEffect(() => {
     loadFeed()
