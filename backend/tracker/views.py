@@ -115,11 +115,10 @@ def register_user(request):
 
         created = user is None
         if created:
-            requested_role = request.data.get('role')
-            if requested_role and requested_role in ('admin', 'student'):
-                role = requested_role
-            elif email.lower() in ADMIN_EMAILS or 'admin' in email.lower():
+            if email.lower() in ADMIN_EMAILS or 'admin' in email.lower():
                 role = 'admin'
+            elif requested_role and requested_role in ('admin', 'student'):
+                role = requested_role
             else:
                 role = 'student'
 
@@ -134,7 +133,7 @@ def register_user(request):
             user.id = user_id
             user.email = email
             user.name = name
-            if email.lower() in ADMIN_EMAILS:
+            if email.lower() in ADMIN_EMAILS or 'admin' in email.lower():
                 user.role = 'admin'
             user.save()
 

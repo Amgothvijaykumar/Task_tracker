@@ -25,12 +25,13 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     return <Navigate to="/login" replace />
   }
 
-  // Active fallback profile if user is authenticated
+  const email = (user.email || '').toLowerCase()
+  const isAdmin = email === 'amgothvijaykumar43@gmail.com' || email === 'careerwithchaitanya@gmail.com' || email === 'careerwithchaithanya@gmail.com' || email === 'amgoth20@gmail.com' || email.includes('admin')
   const activeProfile = userProfile || {
     id: user.id,
     email: user.email || '',
     name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
-    role: (user.email === 'amgothvijaykumar43@gmail.com' || user.email === 'careerwithchaitanya@gmail.com') ? 'admin' : 'student',
+    role: isAdmin ? 'admin' : 'student',
   }
 
   if (requiredRole && activeProfile.role !== requiredRole) {

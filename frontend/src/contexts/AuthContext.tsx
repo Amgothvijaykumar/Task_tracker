@@ -35,12 +35,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const createFallbackProfile = (u: User) => {
-    const email = u.email || ''
-    const isAdmin = email.toLowerCase() === 'amgothvijaykumar43@gmail.com' || email.toLowerCase() === 'careerwithchaitanya@gmail.com' || email.toLowerCase().includes('admin')
+    const email = (u.email || '').toLowerCase()
+    const isAdmin = email === 'amgothvijaykumar43@gmail.com' || email === 'careerwithchaitanya@gmail.com' || email === 'careerwithchaithanya@gmail.com' || email === 'amgoth20@gmail.com' || email.includes('admin')
     const fallback = {
       id: u.id,
-      email: email,
-      name: u.user_metadata?.name || email.split('@')[0] || 'User',
+      email: u.email || '',
+      name: u.user_metadata?.name || u.email?.split('@')[0] || 'User',
       role: isAdmin ? 'admin' : 'student',
     }
     setUserProfile(fallback)
