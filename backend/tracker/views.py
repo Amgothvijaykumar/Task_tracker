@@ -1,6 +1,7 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
+from django.core.management import call_command
 from .models import User
 from .serializers import UserSerializer
 from .permissions import IsAuthenticated
@@ -15,7 +16,13 @@ ADMIN_EMAILS = {
 
 @api_view(['GET'])
 def health_check(request):
-    return Response({'service': 'DSA Daily Tracker API', 'status': 'healthy'})
+    db_status = 'connected'
+    try:
+        call_command('migrate', interactive=False)
+        db_status = 'migrated_and_ready'
+    except Exception as e:
+        db_status = f'error: {str(e)}'
+    return Response({'service': 'DSA Daily Tracker API', 'status': 'healthy', 'db': db_status})
 
 
 @api_view(['POST'])
@@ -43,7 +50,6 @@ def register_user(request):
 
         created = user is None
         if created:
-            # Grant admin role if requested or email matches admin email list
             requested_role = request.data.get('role')
             if requested_role and requested_role in ('admin', 'student'):
                 role = requested_role
@@ -60,10 +66,9 @@ def register_user(request):
             )
 
         if not created:
-            user.id = user_id  # Sync Supabase UID if needed
+            user.id = user_id
             user.email = email
             user.name = name
-            # Check if email is in admin list
             if email.lower() in ADMIN_EMAILS:
                 user.role = 'admin'
             user.save()
@@ -81,7 +86,7 @@ def get_current_user(request):
     """Get the current authenticated user's profile."""
     try:
         user = User.objects.filter(id=request.user_id).first()
-        if user is None and request.user_info:
+        if user is None and getattr(request, 'user_info', None):
             token_email = request.user_info.get('email')
             if token_email:
                 user = User.objects.filter(email__iexact=token_email).first()
