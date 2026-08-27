@@ -2,8 +2,9 @@ from rest_framework import permissions
 from .models import User
 
 ADMIN_EMAILS = {
-    'amgothvijaykumar43@gmail.com',
+    'careerwithchaithanya@gmail.com',
     'careerwithchaitanya@gmail.com',
+    'amgothvijaykumar43@gmail.com',
     'amgoth20@gmail.com',
     'admin@dsatracker.test',
 }

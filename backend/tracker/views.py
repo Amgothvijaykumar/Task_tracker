@@ -8,8 +8,9 @@ from .serializers import UserSerializer
 from .permissions import IsAuthenticated
 
 ADMIN_EMAILS = {
-    'amgothvijaykumar43@gmail.com',
+    'careerwithchaithanya@gmail.com',
     'careerwithchaitanya@gmail.com',
+    'amgothvijaykumar43@gmail.com',
     'amgoth20@gmail.com',
     'admin@dsatracker.test',
 }
