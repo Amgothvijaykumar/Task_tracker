@@ -2,7 +2,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.management import call_command
-from .models import User
+from django.utils import timezone
+from .models import User, Tag, Problem
 from .serializers import UserSerializer
 from .permissions import IsAuthenticated
 
@@ -14,11 +15,75 @@ ADMIN_EMAILS = {
 }
 
 
+def seed_initial_data():
+    """Seed initial tags and sample published problems if database is empty."""
+    try:
+        if Problem.objects.count() > 0:
+            return
+
+        # Ensure admin user exists for created_by reference
+        admin_user = User.objects.filter(role='admin').first()
+        if not admin_user:
+            admin_user = User.objects.create(
+                id='admin-default-seed-id',
+                email='amgothvijaykumar43@gmail.com',
+                name='Amgoth Vijay Kumar',
+                role='admin',
+            )
+
+        tag_array, _ = Tag.objects.get_or_create(name='Arrays', defaults={'slug': 'arrays'})
+        tag_hash, _ = Tag.objects.get_or_create(name='Hash Table', defaults={'slug': 'hash-table'})
+        tag_pointers, _ = Tag.objects.get_or_create(name='Two Pointers', defaults={'slug': 'two-pointers'})
+        tag_binary, _ = Tag.objects.get_or_create(name='Binary Search', defaults={'slug': 'binary-search'})
+
+        today = timezone.localdate()
+
+        p1 = Problem.objects.create(
+            title='Two Sum',
+            source_url='https://leetcode.com/problems/two-sum/',
+            description='Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.',
+            difficulty='Easy',
+            scheduled_date=today,
+            estimated_minutes=15,
+            publication_status='published',
+            created_by=admin_user,
+        )
+        p1.tags.add(tag_array, tag_hash)
+
+        p2 = Problem.objects.create(
+            title='Valid Anagram',
+            source_url='https://leetcode.com/problems/valid-anagram/',
+            description='Given two strings s and t, return true if t is an anagram of s, and false otherwise.',
+            difficulty='Easy',
+            scheduled_date=today,
+            estimated_minutes=10,
+            publication_status='published',
+            created_by=admin_user,
+        )
+        p2.tags.add(tag_hash)
+
+        p3 = Problem.objects.create(
+            title='Container With Most Water',
+            source_url='https://leetcode.com/problems/container-with-most-water/',
+            description='Find two lines that together with the x-axis form a container, such that the container contains the most water.',
+            difficulty='Medium',
+            scheduled_date=today,
+            estimated_minutes=25,
+            publication_status='published',
+            created_by=admin_user,
+        )
+        p3.tags.add(tag_pointers)
+
+    except Exception as e:
+        print(f"Error seeding initial data: {e}")
+
+
 @api_view(['GET'])
 def health_check(request):
     db_status = 'connected'
     try:
         call_command('migrate', interactive=False)
+        seed_initial_data()
         db_status = 'migrated_and_ready'
     except Exception as e:
         db_status = f'error: {str(e)}'
@@ -43,7 +108,6 @@ def register_user(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Match by UID first, then email so existing profiles survive an OAuth UID change.
         user = User.objects.filter(id=user_id).first()
         if user is None:
             user = User.objects.filter(email__iexact=email).first()
@@ -93,7 +157,6 @@ def get_current_user(request):
         if user is None:
             raise User.DoesNotExist
 
-        # Ensure admin emails always have admin role
         if user.email and user.email.lower() in ADMIN_EMAILS and user.role != 'admin':
             user.role = 'admin'
             user.save(update_fields=['role'])
