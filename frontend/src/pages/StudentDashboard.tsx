@@ -28,7 +28,15 @@ export function StudentDashboard() {
   const [token, setToken] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState(todayIST())
   const [difficulty, setDifficulty] = useState('')
-  const [activeCategory, setActiveCategory] = useState<SidebarCategory>('all')
+  const [activeCategory, setActiveCategoryState] = useState<SidebarCategory>(() => {
+    const saved = localStorage.getItem('student_active_category')
+    return (saved as SidebarCategory) || 'all'
+  })
+
+  const setActiveCategory = (cat: SidebarCategory) => {
+    setActiveCategoryState(cat)
+    localStorage.setItem('student_active_category', cat)
+  }
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
   const [data, setData] = useState<StudentFeedResponse | null>(null)

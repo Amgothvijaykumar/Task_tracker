@@ -14,7 +14,15 @@ export function AdminPanel() {
   const { userProfile, signOut, getToken } = useAuth()
   const { theme } = useTheme()
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<Tab>('overview')
+  const [activeTab, setActiveTabState] = useState<Tab>(() => {
+    const saved = localStorage.getItem('admin_active_tab')
+    return (saved as Tab) || 'overview'
+  })
+
+  const setActiveTab = (tab: Tab) => {
+    setActiveTabState(tab)
+    localStorage.setItem('admin_active_tab', tab)
+  }
   const [selectedDate, setSelectedDate] = useState(todayIST())
   const [analytics, setAnalytics] = useState<AdminAnalytics | null>(null)
   const [loading, setLoading] = useState(true)
